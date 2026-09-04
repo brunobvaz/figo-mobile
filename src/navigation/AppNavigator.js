@@ -1,0 +1,4 @@
+import { NavigationContainer, DefaultTheme } from '@react-navigation/native'; import Loading from '../components/common/Loading'; import useAuth from '../hooks/useAuth'; import colors from '../theme/colors'; import AuthNavigator from './AuthNavigator'; import MainNavigator from './MainNavigator'; import { ROUTES } from './routes';
+const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colors.primary, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, notification: colors.error } };
+const linking = { prefixes: ['daterra://'], config: { screens: { [ROUTES.RESET_PASSWORD]: 'reset-password' } } };
+export default function AppNavigator() { const { isAuthenticated, isLoading } = useAuth(); if (isLoading) return <Loading />; return <NavigationContainer theme={theme} linking={linking}>{isAuthenticated ? <MainNavigator /> : <AuthNavigator />}</NavigationContainer>; }

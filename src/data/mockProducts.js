@@ -1,0 +1,14 @@
+import { mockSellers } from './mockUsers';
+const product = (id, title, description, price, unit, category, image, location, distance, sellerIndex, createdAt) => ({ id, title, description, price, unit, category, image, location, distance, seller: mockSellers[sellerIndex], createdAt });
+export default [
+  product('p1', 'Tomate coração de boi', 'Tomate maduro, carnudo e colhido esta manhã. Ideal para saladas.', 2.6, '€/kg', 'Legumes', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=900', 'Ponte de Lima', '1,2 km', 0, '2026-08-31T09:00:00Z'),
+  product('p2', 'Mel artesanal', 'Mel multifloral cru das encostas do rio Vez, frasco de 500 g.', 7.5, '€/frasco', 'Mel', 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=900', 'Arcos de Valdevez', '7 km', 1, '2026-08-30T12:00:00Z'),
+  product('p3', 'Ovos caseiros', 'Ovos frescos de galinhas criadas ao ar livre.', 3.2, '€/dúzia', 'Ovos', 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=900', 'Ponte da Barca', '3,5 km', 2, '2026-08-30T08:30:00Z'),
+  product('p4', 'Batatas novas', 'Batata branca da nossa horta, ótima para assar ou cozer.', 1.4, '€/kg', 'Legumes', 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=900', 'Ponte de Lima', '2,1 km', 0, '2026-08-29T15:00:00Z'),
+  product('p5', 'Laranjas sumarentas', 'Laranjas doces, não calibradas e apanhadas à mão.', 1.8, '€/kg', 'Frutas', 'https://images.unsplash.com/photo-1547514701-42782101795e?w=900', 'Viana do Castelo', '12 km', 3, '2026-08-28T10:00:00Z'),
+  product('p6', 'Azeite virgem extra', 'Azeite de pequena produção, extraído a frio. Garrafa de 750 ml.', 10, '€/unidade', 'Outros', 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=900', 'Viana do Castelo', '11 km', 3, '2026-08-27T11:00:00Z'),
+  product('p7', 'Queijo artesanal', 'Queijo curado de leite de vaca, com cerca de 500 g.', 8.9, '€/unidade', 'Laticínios', 'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=900', 'Ponte da Barca', '4 km', 2, '2026-08-26T09:00:00Z'),
+  product('p8', 'Compota de mirtilo', 'Compota caseira com fruta local e pouco açúcar.', 4.5, '€/frasco', 'Conservas', 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?w=900', 'Ponte da Barca', '4,2 km', 2, '2026-08-25T16:00:00Z'),
+  product('p9', 'Broa de milho', 'Broa cozida em forno a lenha, preparada por encomenda.', 3.8, '€/unidade', 'Padaria', 'https://images.unsplash.com/photo-1509440159596-0249088772ff?w=900', 'Arcos de Valdevez', '6,8 km', 1, '2026-08-24T07:30:00Z'),
+  product('p10', 'Sumo de maçã', 'Sumo 100% natural, sem açúcar adicionado. Caixa de 3 garrafas.', 8, '€/caixa', 'Bebidas', 'https://images.unsplash.com/photo-1576673442511-7e39b6545c87?w=900', 'Ponte de Lima', '2,8 km', 0, '2026-08-23T13:00:00Z'),
+];

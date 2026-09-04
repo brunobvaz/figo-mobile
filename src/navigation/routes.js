@@ -1,0 +1,20 @@
+export const ROUTES = { 
+    LOGIN: 'Login', 
+    REGISTER: 'Register',
+    REGISTER_DETAILS: 'RegisterDetails',
+    OTP_VERIFICATION: 'OtpVerification',
+    FORGOT_PASSWORD: 'ForgotPassword',
+    RESET_PASSWORD: 'ResetPassword',
+    HOME: 'HomeTab', 
+    EXPLORE: 'ExploreTab', 
+    SELL: 'SellTab', 
+    FAVORITES: 'FavoritesTab', 
+    PROFILE: 'ProfileTab', 
+    PRODUCT_DETAILS: 'ProductDetails', 
+    EDIT_PRODUCT: 'EditProduct',
+    CONVERSATIONS: 'Conversations',
+    CHAT: 'Chat',
+    SELLER_PROFILE: 'SellerProfile', 
+    EDIT_PROFILE: 'EditProfile', 
+    ORDERS: 'Orders' 
+};

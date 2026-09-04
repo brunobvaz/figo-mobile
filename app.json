@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "DaTerra",
+    "slug": "daterra",
+    "scheme": "daterra",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#F7F2E7",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "A DaTerra utiliza as tuas fotografias para escolheres uma imagem de perfil.",
+          "microphonePermission": false
+        }
+      ]
+    ]
+  }
+}

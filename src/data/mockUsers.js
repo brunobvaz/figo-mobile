@@ -1,0 +1,7 @@
+export const mockSellers = [
+  { id: 'seller-1', name: 'Quinta da Ribeira', email: 'ribeira@daterra.pt', location: 'Ponte de Lima', bio: 'Horta familiar, cultivada ao ritmo das estações e sem desperdício.', avatar: 'https://images.unsplash.com/photo-1560493676-04071c5f467b?w=400', memberSince: '2022-03-12' },
+  { id: 'seller-2', name: 'Apiário do Vez', email: 'apiario@daterra.pt', location: 'Arcos de Valdevez', bio: 'Mel e produtos da colmeia produzidos nas serras do Alto Minho.', avatar: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400', memberSince: '2021-09-04' },
+  { id: 'seller-3', name: 'Casa do Souto', email: 'souto@daterra.pt', location: 'Ponte da Barca', bio: 'Pequena produção de ovos, queijo e compotas caseiras.', avatar: 'https://images.unsplash.com/photo-1500076656116-558758c991c1?w=400', memberSince: '2023-01-19' },
+  { id: 'seller-4', name: 'Sabores da Serra', email: 'serra@daterra.pt', location: 'Viana do Castelo', bio: 'Receitas tradicionais, azeite e conservas feitas em pequenos lotes.', avatar: 'https://images.unsplash.com/photo-1523742810063-7e2b6e9d8c99?w=400', memberSince: '2020-06-28' },
+];
+export const defaultUser = { id: 'user-local', name: 'Maria do Minho', email: 'maria@daterra.pt', location: 'Ponte de Lima', bio: 'Gosto de comprar local e conhecer quem produz.', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400' };

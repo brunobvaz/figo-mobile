@@ -1,0 +1,3 @@
+import { StyleSheet, Text, View } from 'react-native'; import colors from '../../theme/colors'; import spacing from '../../theme/spacing';
+export default function EmptyState({ title = 'Ainda não há nada aqui', message }) { return <View style={styles.container}><Text style={styles.icon}>🌱</Text><Text style={styles.title}>{title}</Text>{message ? <Text style={styles.message}>{message}</Text> : null}</View>; }
+const styles = StyleSheet.create({ container: { padding: spacing.xl, alignItems: 'center', gap: spacing.sm }, icon: { fontSize: 34 }, title: { color: colors.text, fontSize: 18, fontWeight: '700', textAlign: 'center' }, message: { color: colors.textMuted, textAlign: 'center', lineHeight: 21 } });

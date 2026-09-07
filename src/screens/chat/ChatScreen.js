@@ -14,7 +14,7 @@ import { chatService } from '../../services/chatService';
 import { createId } from '../../utils/helpers';
 import { mergeMessages } from '../../utils/chatMessages';
 
-export default function ChatScreen({ route }) {
+export default function ChatScreen({ route, navigation }) {
   const { conversationId: initialId, productId, productTitle, participantName, sellerName } = route.params || {};
   const { user } = useAuth();
   const { refresh } = useChat();
@@ -56,10 +56,10 @@ export default function ChatScreen({ route }) {
     setError(null);
     setLoading(true);
     chatService.open(productId).then((conversation) => {
-      if (!cancelled) { setId(conversation.id); refresh(); }
+      if (!cancelled) { setId(conversation.id); navigation.setParams({ conversationId: conversation.id }); refresh(); }
     }).catch((failure) => { if (!cancelled) { setError(failure.message); setLoading(false); } });
     return () => { cancelled = true; };
-  }, [id, productId, refresh, attempt]);
+  }, [id, productId, refresh, attempt, navigation]);
 
   useEffect(() => {
     if (!id || !focused || appState !== 'active') return;

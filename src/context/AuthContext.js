@@ -1,5 +1,6 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { authService } from '../services/authService';
+import { clearPushUser, setPushUser } from '../services/pushNotifications';
 import { setUnauthorizedHandler } from '../services/api';
 
 export const AuthContext = createContext(null);
@@ -8,7 +9,7 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     let active = true;
-    setUnauthorizedHandler(() => { if (active) setUser(null); });
+    setUnauthorizedHandler(() => { clearPushUser(); if (active) setUser(null); });
     authService.restoreSession()
       .then((currentUser) => { if (active) setUser(currentUser); })
       .catch(() => { if (active) setUser(null); })
@@ -17,8 +18,8 @@ export function AuthProvider({ children }) {
   }, []);
   const login = useCallback(async (credentials) => { setIsLoading(true); try { const session = await authService.login(credentials); setUser(session.user); } finally { setIsLoading(false); } }, []);
   const verifyRegistrationOtp = useCallback(async (data) => { setIsLoading(true); try { const session = await authService.verifyRegistrationOtp(data); setUser(session.user); return session; } finally { setIsLoading(false); } }, []);
-  const logout = useCallback(async () => { await authService.logout(); setUser(null); }, []);
-  const logoutAll = useCallback(async () => { await authService.logoutAll(); setUser(null); }, []);
+  const logout = useCallback(async () => { try { await authService.logout(); setUser(null); } catch (error) { setPushUser(user?.id); throw error; } }, [user?.id]);
+  const logoutAll = useCallback(async () => { try { await authService.logoutAll(); setUser(null); } catch (error) { setPushUser(user?.id); throw error; } }, [user?.id]);
   const updateProfile = useCallback(async (changes) => { const nextUser = await authService.updateProfile(changes); setUser(nextUser); return nextUser; }, []);
   const updateAvatar = useCallback(async (asset) => { const nextUser = await authService.updateAvatar(asset); setUser(nextUser); return nextUser; }, []);
   const enableSeller = useCallback(async () => { const nextUser = await authService.enableSeller(); setUser(nextUser); return nextUser; }, []);

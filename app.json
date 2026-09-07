@@ -8,6 +8,7 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
+      "appleTeamId": "9T837KG949",
       "bundleIdentifier": "com.brunobvaz.daterra.bench",
       "supportsTablet": true,
       "infoPlist": {
@@ -25,6 +26,7 @@
       "favicon": "./assets/icon.png"
     },
     "plugins": [
+      ["expo-notifications", { "defaultChannel": "messages" }],
       [
         "expo-splash-screen",
         {

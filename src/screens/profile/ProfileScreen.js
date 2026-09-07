@@ -1,4 +1,4 @@
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native'; 
+import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/common/Avatar'; 
 import Button from '../../components/common/Button'; 
@@ -9,6 +9,7 @@ import useProducts from '../../hooks/useProducts';
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors'; 
 import spacing from '../../theme/spacing';
+import { registerPushNotifications } from '../../services/pushNotifications';
 import { formatLocation } from '../../utils/formatters';
 
 export default function ProfileScreen({ navigation }) { 
@@ -16,8 +17,16 @@ export default function ProfileScreen({ navigation }) {
     const { favoriteIds } = useFavorites();
     const { products } = useProducts(); 
     const mine = products.filter((item) => item.seller.id === user.id).length; 
-    const signOut = () => Alert.alert('Terminar sessão?', 'Podes voltar a entrar quando quiseres.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sair', style: 'destructive', onPress: logout }]); 
+    const signOut = () => Alert.alert('Terminar sessão?', 'Podes voltar a entrar quando quiseres.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sair', style: 'destructive', onPress: async () => { try { await logout(); } catch { Alert.alert('Não foi possível terminar sessão', 'Confirma a ligação e tenta novamente para desligar esta conta do dispositivo.'); } } }]); 
     
+    const enableNotifications = async () => {
+        try {
+            const status = await registerPushNotifications({ requestPermission: true });
+            if (status === 'registered') Alert.alert('Notificações ativas', 'Vais receber avisos de novas mensagens neste dispositivo.');
+            else if (status === 'denied') Alert.alert('Permissão necessária', 'Ativa as notificações nas definições do dispositivo.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Abrir definições', onPress: () => Linking.openSettings() }]);
+            else Alert.alert('Nova build necessária', 'As notificações precisam de uma build com suporte nativo. Não estão disponíveis nesta execução.');
+        } catch { Alert.alert('Não foi possível ativar', 'Confirma a ligação e a configuração de notificações desta build e tenta novamente.'); }
+    };
     return <Screen scroll contentContainerStyle={styles.page}>
         <View style={styles.profile}><Avatar uri={user.avatar} name={user.name} size={88} />
         <Text style={styles.name}>{user.name}</Text><Text style={styles.email}>{user.email}</Text>
@@ -48,6 +57,7 @@ export default function ProfileScreen({ navigation }) {
             label="As minhas encomendas" 
             onPress={() => navigation.navigate('Orders')} 
             />
+            <MenuItem icon="notifications-outline" label="Ativar notificações" onPress={enableNotifications} />
             <Button 
             title="Terminar sessão" 
             variant="secondary" 

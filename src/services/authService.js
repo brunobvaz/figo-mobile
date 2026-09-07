@@ -1,4 +1,5 @@
 import { File as ExpoFile } from 'expo-file-system';
+import { unregisterPushNotifications } from './pushNotifications';
 import { api } from './api';
 import { tokenStorage } from '../storage/tokenStorage';
 import config from '../config/config';
@@ -27,13 +28,15 @@ export const authService = {
     return normalizeUser(await api.get('/auth/me'));
   },
   async logout() {
+    await unregisterPushNotifications().catch(() => {});
     const refreshToken = await tokenStorage.getRefreshToken();
-    try { if (refreshToken) await api.post('/auth/logout', { refreshToken }); }
-    finally { await tokenStorage.clear(); }
+    if (refreshToken) await api.post('/auth/logout', { refreshToken });
+    await tokenStorage.clear();
   },
   async logoutAll() {
-    try { await api.post('/auth/logout-all', {}); }
-    finally { await tokenStorage.clear(); }
+    await unregisterPushNotifications().catch(() => {});
+    await api.post('/auth/logout-all', {});
+    await tokenStorage.clear();
   },
   updateProfile: async (changes) => normalizeUser(await api.patch('/users/me', changes)),
   async updateAvatar(asset) {

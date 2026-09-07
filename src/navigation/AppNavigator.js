@@ -6,6 +6,8 @@ import colors from '../theme/colors';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import { ChatProvider } from '../context/ChatContext';
+import PushNotifications from '../components/PushNotifications';
+import { navigationRef } from './navigationRef';
 import { ROUTES } from './routes';
 
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colors.primary, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, notification: colors.error } };
@@ -23,11 +25,12 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       theme={theme}
       linking={linking}
       fallback={<SplashScreen />}
     >
-      {isAuthenticated ? <ChatProvider key={user.id}><MainNavigator /></ChatProvider> : <AuthNavigator />}
+      {isAuthenticated ? <ChatProvider key={user.id}><PushNotifications /><MainNavigator /></ChatProvider> : <AuthNavigator />}
     </NavigationContainer>
   );
 }

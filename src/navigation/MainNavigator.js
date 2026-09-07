@@ -55,7 +55,7 @@ export default function MainNavigator() {
                 <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
                 <Stack.Screen name={ROUTES.EDIT_PRODUCT} component={CreateProductScreen} options={{ title: 'Editar produto' }} />
-                <Stack.Screen name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />
+                <Stack.Screen getId={({ params }) => params?.conversationId || params?.productId} name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />
                 <Stack.Screen name={ROUTES.FAVORITES} component={FavoritesScreen} options={{ title: 'Favoritos' }} />
                 <Stack.Screen name={ROUTES.SELLER_PROFILE} component={SellerProfileScreen} options={{ title: 'Produtor' }} />
                 <Stack.Screen name={ROUTES.EDIT_PROFILE} component={EditProfileScreen} options={{ title: 'Editar perfil' }} />

@@ -94,3 +94,20 @@ Para testar no Render:
 6. Fechar e voltar a abrir a app para verificar a persistência. Experimentar um envio sem rede e o reenvio ao recuperar a ligação.
 
 A atualização do Render não atualiza a build instalada. Ambas as apps devem conter este código para o teste completo. A exportação dos bundles valida a compilação; a interação nativa deve ser confirmada nos dispositivos.
+
+## Ativar push
+
+A app inclui `expo-notifications`, o plugin de configuração, o entitlement APNs no projeto iOS existente e a opção **Perfil → Ativar notificações**. Pedimos a permissão apenas por essa opção. Uma permissão já concedida volta a registar o dispositivo no login e quando a app regressa ao primeiro plano. Alterações do token também são registadas. O chat continua funcional se a permissão for recusada ou o registo falhar.
+
+Preparação obrigatória:
+
+1. **iOS:** no projeto EAS `ab64ac0d-87e9-4ed5-8450-582c85f46a45`, configurar a chave APNs para `com.brunobvaz.daterra.bench` e a equipa `9T837KG949`, através de `eas credentials --platform ios`. A assinatura/provisioning profile deve incluir Push Notifications. Para Xcode, abrir `ios/Figo.xcworkspace`; os Pods já incluem ExpoNotifications. Gerar uma nova build assinada.
+2. **Android:** criar/selecionar a aplicação Firebase com o mesmo package, disponibilizar o ficheiro `google-services.json` através da variável `GOOGLE_SERVICES_JSON` (caminho local ou variável de ficheiro no EAS) e carregar as credenciais FCM v1 no EAS. `app.config.js` aplica esse caminho ao gerar o projeto Android. A chave privada da conta de serviço fica no EAS, nunca no bundle.
+3. Publicar o backend e ativar `PUSH_ENABLED=true`. Se necessário, definir `EXPO_ACCESS_TOKEN` apenas no servidor.
+4. Gerar novas builds; uma atualização apenas JavaScript não instala este módulo nativo. Expo Go e web são ignorados por esta implementação. Para a validação final, usar dispositivos físicos e builds com as credenciais corretas.
+
+Ao tocar numa notificação, a app aguarda a autenticação, verifica se a conta corresponde ao destinatário e consulta a conversa autorizada na API antes de navegar. Notificações de outra conta são ignoradas. Um aviso recebido com essa conversa aberta não mostra banner nem toca som. O contador do ícone é sincronizado com as não lidas quando a app está ativa; sem executar a app, não há sincronização silenciosa entre dispositivos nesta fase.
+
+Teste manual: conta A envia a B; verificar B em primeiro plano noutra página, em segundo plano e com a app fechada. Tocar no aviso deve abrir a conversa certa. Repetir com a conversa já aberta (sem alerta redundante), dois dispositivos da conta B, logout, troca de conta e permissão recusada. Durante indisponibilidade de rede, as mensagens continuam no servidor e o registo de push é repetido ao regressar à app. O logout só conclui após confirmação do backend; se não houver rede, a app pede para repetir, mantendo a sessão local até conseguir desligar a conta. Avisos já entregues ao sistema antes do logout não podem ser retirados do serviço remoto.
+
+Referências: https://docs.expo.dev/versions/v57.0.0/sdk/notifications/ e https://docs.expo.dev/push-notifications/push-notifications-setup/.

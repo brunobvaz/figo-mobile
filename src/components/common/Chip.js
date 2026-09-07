@@ -49,18 +49,18 @@ const styles = StyleSheet.create({
         backgroundColor: colors.cream
     },
     selected: {
-        backgroundColor: colors.primary
+        backgroundColor: colors.primaryFigo
     },
     outlined: {
         paddingHorizontal: 12,
         paddingVertical: 7,
         borderWidth: 1,
-        borderColor: colors.primary,
+        borderColor: colors.primaryFigo,
         borderRadius: 18,
         backgroundColor: colors.transparent
     },
     outlinedSelected: {
-        backgroundColor: colors.primaryLight
+        backgroundColor: colors.primaryLightFigo
     },
     text: {
         color: colors.text,
@@ -71,7 +71,7 @@ const styles = StyleSheet.create({
         fontWeight: typography.weights.bold
     },
     outlinedText: {
-        color: colors.primaryDark,
+        color: colors.primaryDarkFigo,
         fontWeight: typography.weights.semibold
     },
     pressed: {

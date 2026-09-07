@@ -1,3 +1,4 @@
+import { fetch as expoFetch } from 'expo/fetch';
 import config from '../config/config';
 import { tokenStorage } from '../storage/tokenStorage';
 
@@ -29,7 +30,9 @@ const request = async (path, options = {}, allowRefresh = true) => {
   try {
     const accessToken = await tokenStorage.getAccessToken();
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
-    const response = await fetch(`${config.apiBaseUrl}${path}`, {
+    // Expo File multipart bodies need Expo's serializer to include their bytes.
+    const requestFetch = isFormData ? expoFetch : fetch;
+    const response = await requestFetch(`${config.apiBaseUrl}${path}`, {
       ...options,
       signal: controller.signal,
       headers: { Accept: 'application/json', ...(!isFormData ? { 'Content-Type': 'application/json' } : {}), ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...options.headers },

@@ -44,6 +44,6 @@ const styles = StyleSheet.create({
     card: { marginBottom: spacing.md, padding: spacing.md, borderRadius: 16, backgroundColor: colors.surface, gap: spacing.sm, ...shadows.card },
     row: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
     title: { flex: 1, color: colors.text, fontWeight: '700', fontSize: 16 },
-    status: { color: colors.primaryDark, backgroundColor: colors.primaryLight, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4, fontSize: 11 },
-    meta: { color: colors.textMuted }, price: { color: colors.primaryDark, fontWeight: '800' }
+    status: { color: colors.primaryDarkFigo, backgroundColor: colors.primaryLightFigo, borderRadius: 12, paddingHorizontal: 9, paddingVertical: 4, fontSize: 11 },
+    meta: { color: colors.textMuted }, price: { color: colors.primaryDarkFigo, fontWeight: '800' }
 });

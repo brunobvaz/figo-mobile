@@ -1,4 +1,5 @@
-export const ROUTES = { 
+export const ROUTES = {
+    WELCOME: 'Welcome', 
     LOGIN: 'Login', 
     REGISTER: 'Register',
     REGISTER_DETAILS: 'RegisterDetails',

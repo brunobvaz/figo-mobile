@@ -46,7 +46,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
                 <Button title="Ver perfil" variant="secondary" onPress={() => navigation.navigate('SellerProfile', { sellerId: product.seller.id })} />
             </View>
             <Button title={favorite ? 'Remover dos favoritos' : 'Guardar nos favoritos'} variant="secondary" onPress={() => toggleFavorite(product.id)} />
-            <Button title="Contactar vendedor" onPress={openChat} />
+            {!isOwner ? <Button title="Contactar vendedor" onPress={openChat} /> : null}
             {isOwner ? <Button title="Editar produto" variant="secondary" onPress={() => navigation.navigate(ROUTES.EDIT_PRODUCT, { productId: product.id })} /> : null}
             {isOwner ? <Button title="Remover produto" variant="secondary" onPress={confirmRemoval} /> : null}
         </View>
@@ -55,9 +55,9 @@ export default function ProductDetailsScreen({ route, navigation }) {
 
 const styles = StyleSheet.create({
     page: { paddingHorizontal: 0 },
-    image: { width: '100%', height: 310, backgroundColor: colors.primaryLight },
+    image: { width: '100%', height: 310, backgroundColor: colors.primaryLightFigo },
     body: { padding: spacing.md, gap: spacing.md },
-    category: { color: colors.primary, fontWeight: '700', textTransform: 'uppercase', fontSize: 12 },
+    category: { color: colors.primaryFigo, fontWeight: '700', textTransform: 'uppercase', fontSize: 12 },
     title: { color: colors.text, fontSize: 28, fontWeight: '800' },
     meta: { color: colors.textMuted },
     heading: { color: colors.text, fontSize: 17, fontWeight: '700' },

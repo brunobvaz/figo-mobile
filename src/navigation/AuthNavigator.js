@@ -8,10 +8,13 @@ import { RegistrationProvider } from '../context/RegistrationContext';
 import ResetPasswordScreen from '../screens/auth/ResetPasswordScreen';
 import { ROUTES } from './routes';
 
+import WelcomeScreen from '../screens/wellcome/WelcomeScreen';
+
 const Stack = createNativeStackNavigator();
 
 export default function AuthNavigator() {
-    return <RegistrationProvider><Stack.Navigator screenOptions={{ headerShown: false }}>
+    return <RegistrationProvider><Stack.Navigator initialRouteName={ROUTES.WELCOME} screenOptions={{ headerShown: false }}>
+        <Stack.Screen name={ROUTES.WELCOME} component={WelcomeScreen} />
         <Stack.Screen name={ROUTES.LOGIN} component={LoginScreen} />
         <Stack.Screen name={ROUTES.REGISTER} component={RegisterScreen} />
         <Stack.Screen name={ROUTES.REGISTER_DETAILS} component={RegisterDetailsScreen} />

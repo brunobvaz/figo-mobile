@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native generated projects
+/ios/
+/android/
+
+# Local environment overrides
+.env*.local
+
+# Build artifacts and credentials
+*.apk
+*.aab
+*.ipa
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Logs and operating-system files
+*.log
+.DS_Store
+

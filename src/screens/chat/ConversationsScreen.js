@@ -5,7 +5,10 @@ import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
 import Header from '../../components/layout/Header';
 import Screen from '../../components/layout/Screen';
-import mockConversations from '../../data/mockConversations';
+import { useChat } from '../../context/ChatContext';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback } from 'react';
+import Button from '../../components/common/Button';
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
 import shadows from '../../theme/shadows';
@@ -13,51 +16,52 @@ import spacing from '../../theme/spacing';
 import typography from '../../theme/typography';
 
 export default function ConversationsScreen({ navigation }) {
+    const { conversations, loading, error, refresh, loadMore, hasMore } = useChat();
+    useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     const openConversation = (conversation) => navigation.navigate(ROUTES.CHAT, {
         conversationId: conversation.id,
-        sellerId: conversation.seller.id,
-        sellerName: conversation.seller.name,
+        participantId: conversation.participant.id,
+        participantName: conversation.participant.name,
         productId: conversation.productId,
-        productTitle: conversation.productTitle,
-        initialMessages: conversation.messages
+        productTitle: conversation.productTitle
     });
 
     return <Screen contentContainerStyle={styles.page}>
-        <Header title="Conversas" subtitle="Fala diretamente com os produtores" />
+        <Header title="Conversas" subtitle="As tuas mensagens com compradores e produtores" />
         <FlatList
-            data={mockConversations}
+            data={conversations}
+            refreshing={loading}
+            onRefresh={refresh}
+            ListHeaderComponent={error ? <Text accessibilityRole="alert" style={styles.preview}>{error}</Text> : null}
+            ListFooterComponent={hasMore ? <Button title="Mais conversas" variant="secondary" onPress={loadMore} /> : null}
             keyExtractor={(item) => item.id}
             contentContainerStyle={styles.list}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={
                 <EmptyState
-                    title="Ainda não tens conversas"
-                    message="Contacta um vendedor a partir da página de um produto."
+                    title={loading ? 'A carregar conversas…' : 'Ainda não tens conversas'}
+                    message={loading ? 'A obter as tuas mensagens.' : 'Contacta um vendedor a partir da página de um produto.'}
                 />
             }
             renderItem={({ item }) =>
                 <Pressable
                     accessibilityRole="button"
-                    accessibilityLabel={`Abrir conversa com ${item.seller.name}`}
+                    accessibilityLabel={`Abrir conversa com ${item.participant.name}`}
                     onPress={() => openConversation(item)}
                     style={({ pressed }) => [styles.conversation, pressed && styles.pressed]}
                 >
-                    <Avatar uri={item.seller.avatar} name={item.seller.name} size={52} />
+                    <View><Avatar uri={item.participant.avatar} name={item.participant.name} size={52} /><Badge value={item.unreadCount} style={{ position: 'absolute', right: -4, top: -4 }} accessibilityLabel={`${item.unreadCount} mensagens não lidas`} /></View>
 
                     <View style={styles.content}>
                         <View style={styles.row}>
-                            <Text numberOfLines={1} style={styles.name}>{item.seller.name}</Text>
-                            <Text style={styles.timestamp}>{item.timestamp}</Text>
+                            <Text numberOfLines={1} style={styles.name}>{item.participant.name}</Text>
+                            <Text style={styles.timestamp}>{new Date(item.updatedAt).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })}</Text>
                         </View>
                         <Text numberOfLines={1} style={styles.product}>{item.productTitle}</Text>
                         <Text numberOfLines={1} style={styles.preview}>{item.lastMessage}</Text>
                     </View>
 
                     <View style={styles.trailing}>
-                        <Badge
-                            value={item.unreadCount}
-                            accessibilityLabel={`${item.unreadCount} mensagens não lidas`}
-                        />
                         <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
                     </View>
                 </Pressable>
@@ -104,7 +108,7 @@ const styles = StyleSheet.create({
         fontSize: typography.sizes.caption
     },
     product: {
-        color: colors.primaryDark,
+        color: colors.primaryDarkFigo,
         fontSize: typography.sizes.caption,
         fontWeight: typography.weights.semibold
     },

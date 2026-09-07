@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "DaTerra",
+    "name": "Figo",
     "slug": "daterra",
     "scheme": "daterra",
     "version": "1.0.0",
@@ -8,20 +8,32 @@
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "bundleIdentifier": "com.brunobvaz.daterra.bench",
+      "supportsTablet": true,
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
+      "package": "com.brunobvaz.daterra.bench",
       "adaptiveIcon": {
         "backgroundColor": "#F7F2E7",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/splash-icon.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/icon.png"
     },
     "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F2E7"
+        }
+      ],
       "expo-secure-store",
       [
         "expo-image-picker",
@@ -29,7 +41,14 @@
           "photosPermission": "A DaTerra utiliza as tuas fotografias para escolheres uma imagem de perfil.",
           "microphonePermission": false
         }
-      ]
-    ]
+      ],
+      "./plugins/withSplashBackground"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "ab64ac0d-87e9-4ed5-8450-582c85f46a45"
+      }
+    },
+    "owner": "brunobvaz"
   }
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Screen from '../../components/layout/Screen';
@@ -33,8 +33,12 @@ export default function LoginScreen({ navigation }) {
 
     return <Screen scroll contentContainerStyle={styles.container}>
         <View style={styles.brand}>
-            <Text style={sharedStyles.brandIcon}>🌿</Text>
-            <Text style={sharedStyles.brandLogo}>DaTerra</Text>
+            <Image
+                source={require('../../../assets/splash-icon.png')}
+                style={styles.logo}
+                resizeMode="contain"
+                accessibilityLabel="FiGO"
+            />
             <Text style={sharedStyles.brandTagline}>Produtos locais. Pessoas próximas.</Text>
         </View>
         <View style={sharedStyles.form}>
@@ -69,5 +73,6 @@ export default function LoginScreen({ navigation }) {
 }
 const styles = StyleSheet.create({
     container: { justifyContent: 'center', gap: spacing.xl, paddingVertical: spacing.xxl },
-    brand: { alignItems: 'center' }
+    brand: { alignItems: 'center' },
+    logo: { width: 200, height: 200 }
 });

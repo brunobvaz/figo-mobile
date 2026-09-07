@@ -62,7 +62,7 @@ function MenuItem({ icon, label, detail, onPress }) {
         <Ionicons 
         name={icon} 
         size={22} 
-        color={colors.primary} 
+        color={colors.primaryFigo} 
         />
         <Text 
         style={styles.itemLabel}
@@ -86,9 +86,9 @@ const styles = StyleSheet.create({
     profile: { alignItems: 'center', gap: 5 }, 
     name: { color: colors.text, fontSize: 24, fontWeight: '800' }, 
     email: { color: colors.textMuted }, 
-    location: { color: colors.primaryDark }, 
+    location: { color: colors.primaryDarkFigo }, 
     stat: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.cream, alignItems: 'center' }, 
-    statNumber: { color: colors.primaryDark, fontSize: 23, fontWeight: '800' }, 
+    statNumber: { color: colors.primaryDarkFigo, fontSize: 23, fontWeight: '800' }, 
     statLabel: { color: colors.textMuted }, 
     item: { minHeight: 56, paddingHorizontal: spacing.md, borderRadius: 14, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.md }, 
     itemLabel: { flex: 1, color: colors.text, fontWeight: '600' }, detail: { color: colors.textMuted } 

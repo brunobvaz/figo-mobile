@@ -36,7 +36,7 @@ const styles = StyleSheet.create({
         paddingVertical: spacing.sm
     },
     text: {
-        color: colors.primaryDark,
+        color: colors.primaryDarkFigo,
         fontSize: typography.sizes.body,
         fontWeight: typography.weights.semibold,
         textDecorationLine: 'underline'

@@ -89,5 +89,5 @@ const styles = StyleSheet.create({
     categories: { gap: spacing.sm, paddingVertical: spacing.sm },
     section: { gap: spacing.xs },
     sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-    action: { color: colors.primary, fontWeight: '700' }
+    action: { color: colors.primaryDarkFigo, fontWeight: '700' }
 });

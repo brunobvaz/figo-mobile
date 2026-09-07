@@ -12,7 +12,7 @@ export default StyleSheet.create({
         gap: spacing.md
     },
     screenTitle: {
-        color: colors.primaryDark,
+        color: colors.primaryDarkFigo,
         fontSize: typography.sizes.screenTitle,
         fontWeight: typography.weights.extraBold
     },
@@ -30,7 +30,7 @@ export default StyleSheet.create({
         fontSize: typography.sizes.icon
     },
     brandLogo: {
-        color: colors.primaryDark,
+        color: colors.primaryDarkFigo,
         fontSize: typography.sizes.logo,
         fontWeight: typography.weights.extraBold
     },

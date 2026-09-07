@@ -77,3 +77,20 @@ Os providers vivem em `App.js`. O `AppNavigator` seleciona automaticamente o flu
 As variáveis públicas Expo começam por `EXPO_PUBLIC_`. Define `EXPO_PUBLIC_API_BASE_URL=http://localhost:3000/api/v1` para o simulador iOS. Em dispositivo físico, troca `localhost` pelo IP local do computador; no emulador Android usa normalmente `10.0.2.2`.
 
 O esquema `daterra://` está configurado para abrir o ecrã de recuperação através de `daterra://reset-password?token=...`.
+
+## Chat real e teste com duas contas
+
+O chat já não utiliza `mockConversations`. `ChatProvider` mantém as conversas e o total de mensagens não lidas, e é desmontado no logout/troca de conta. O indicador sobre o avatar mostra as não lidas dessa conversa; a tab Conversas mostra o total. O vendedor vê o nome e avatar do comprador, e vice-versa.
+
+Com a app ativa, a lista atualiza a cada 8 segundos e a conversa aberta a cada 4 segundos. O chat recupera mensagens ao regressar à app, permite carregar histórico anterior e só confirma a leitura das mensagens visíveis na conversa em foco. Um envio falhado mostra “Reenviar mensagem” e mantém o identificador para evitar duplicados. Fechar o ecrã descarta os rascunhos locais; mensagens confirmadas ficam no servidor. Push fica para uma fase posterior.
+
+Para testar no Render:
+
+1. Publicar o backend atualizado e gerar/instalar uma nova build mobile com `EXPO_PUBLIC_API_BASE_URL` a apontar para esse backend.
+2. Usar duas contas verificadas na mesma base de dados, uma em cada dispositivo. Uma conta deve ter um produto publicado.
+3. Na outra conta, abrir o produto e tocar em “Contactar vendedor”. Enviar uma mensagem.
+4. Com a app do vendedor ativa, verificar o indicador em Conversas e sobre o avatar. Abrir a conversa e responder.
+5. Confirmar a troca nos dois sentidos e o desaparecimento do indicador após visualizar as mensagens. Se houver mensagens antigas fora do ecrã, continuam não lidas até serem apresentadas.
+6. Fechar e voltar a abrir a app para verificar a persistência. Experimentar um envio sem rede e o reenvio ao recuperar a ligação.
+
+A atualização do Render não atualiza a build instalada. Ambas as apps devem conter este código para o teste completo. A exportação dos bundles valida a compilação; a interação nativa deve ser confirmada nos dispositivos.

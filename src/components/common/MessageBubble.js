@@ -40,7 +40,7 @@ const styles = StyleSheet.create({
     },
     ownBubble: {
         alignSelf: 'flex-end',
-        backgroundColor: colors.primary
+        backgroundColor: colors.primaryFigo
     },
     otherBubble: {
         alignSelf: 'flex-start',
@@ -60,6 +60,6 @@ const styles = StyleSheet.create({
         textAlign: 'right'
     },
     ownMetadata: {
-        color: colors.primaryLight
+        color: colors.primaryLightFigo
     }
 });

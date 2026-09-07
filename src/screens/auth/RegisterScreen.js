@@ -48,8 +48,8 @@ export default function RegisterScreen({ navigation }) {
 
 const styles = StyleSheet.create({
     progress: { gap: spacing.sm },
-    step: { color: colors.primaryDark, fontWeight: '700' },
+    step: { color: colors.primaryDarkFigo, fontWeight: '700' },
     track: { height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
-    halfTrack: { width: '50%', height: '100%', backgroundColor: colors.primary },
+    halfTrack: { width: '50%', height: '100%', backgroundColor: colors.primaryFigo },
     hint: { color: colors.textMuted, fontSize: 12, marginTop: -spacing.sm }
 });

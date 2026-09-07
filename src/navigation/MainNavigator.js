@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Badge from '../components/common/Badge';
-import mockConversations from '../data/mockConversations';
+import { useChat } from '../context/ChatContext';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ConversationsScreen from '../screens/chat/ConversationsScreen';
 import ExploreScreen from '../screens/explore/ExploreScreen'; 
@@ -20,9 +20,9 @@ import colors from '../theme/colors'; import { ROUTES } from './routes';
 const Stack = createNativeStackNavigator(); 
 const Tabs = createBottomTabNavigator();
 const tabIcons = { HomeTab: ['home', 'home-outline'], ExploreTab: ['compass', 'compass-outline'], SellTab: ['add-circle', 'add-circle-outline'], Conversations: ['chatbubbles', 'chatbubbles-outline'], ProfileTab: ['person', 'person-outline'] };
-const unreadMessages = mockConversations.reduce((total, item) => total + item.unreadCount, 0);
 
 function TabIcon({ routeName, focused, color, size }) {
+    const { unreadTotal } = useChat();
     return <View style={styles.tabIcon}>
         <Ionicons
             name={tabIcons[routeName][focused ? 0 : 1]}
@@ -31,8 +31,8 @@ function TabIcon({ routeName, focused, color, size }) {
         />
         {routeName === ROUTES.CONVERSATIONS ?
             <Badge
-                value={unreadMessages}
-                accessibilityLabel={`${unreadMessages} mensagens não lidas`}
+                value={unreadTotal}
+                accessibilityLabel={`${unreadTotal} mensagens não lidas`}
                 style={styles.tabBadge}
             />
             : null
@@ -42,7 +42,7 @@ function TabIcon({ routeName, focused, color, size }) {
 
 function TabNavigator() { 
     return <Tabs.Navigator 
-            screenOptions={({ route }) => ({ headerShown: false, tabBarActiveTintColor: colors.primaryDark, tabBarInactiveTintColor: colors.textMuted, tabBarStyle: { height: 68, paddingTop: 7, paddingBottom: 8, backgroundColor: colors.surface, borderTopColor: colors.border }, tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} /> })}>
+            screenOptions={({ route }) => ({ headerShown: false, tabBarActiveTintColor: colors.primaryDarkFigo, tabBarInactiveTintColor: colors.textMuted, tabBarStyle: { height: 68, paddingTop: 7, paddingBottom: 8, backgroundColor: colors.surface, borderTopColor: colors.border }, tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} /> })}>
                 <Tabs.Screen name={ROUTES.HOME} component={HomeScreen} options={{ title: 'Início' }} />
                 <Tabs.Screen name={ROUTES.EXPLORE} component={ExploreScreen} options={{ title: 'Explorar' }} />
                 <Tabs.Screen name={ROUTES.SELL} component={CreateProductScreen} options={{ title: 'Vender' }} />
@@ -51,11 +51,11 @@ function TabNavigator() {
             </Tabs.Navigator>; }
 
 export default function MainNavigator() { 
-    return <Stack.Navigator screenOptions={{ headerTintColor: colors.primaryDark, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
+    return <Stack.Navigator screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
                 <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
                 <Stack.Screen name={ROUTES.EDIT_PRODUCT} component={CreateProductScreen} options={{ title: 'Editar produto' }} />
-                <Stack.Screen name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.sellerName || 'Conversa' })} />
+                <Stack.Screen name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />
                 <Stack.Screen name={ROUTES.FAVORITES} component={FavoritesScreen} options={{ title: 'Favoritos' }} />
                 <Stack.Screen name={ROUTES.SELLER_PROFILE} component={SellerProfileScreen} options={{ title: 'Produtor' }} />
                 <Stack.Screen name={ROUTES.EDIT_PROFILE} component={EditProfileScreen} options={{ title: 'Editar perfil' }} />

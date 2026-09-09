@@ -1,5 +1,6 @@
+import ProductLocation from '../../components/product/ProductLocation';
 import { useState } from 'react';
-import { Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Button from '../../components/common/Button';
 import Chip from '../../components/common/Chip';
@@ -10,10 +11,11 @@ import useAuth from '../../hooks/useAuth';
 import useProducts from '../../hooks/useProducts';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
-import { PRODUCT_UNITS } from '../../utils/constants';
+import ProductPriceInput from '../../components/product/ProductPriceInput';
+import { parsePrice, formatPriceInput } from '../../utils/price';
 import { validateProduct } from '../../utils/validators';
 
-const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', location: 'Ponte de Lima', image: '' };
+const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'gps', locationChanged: true, image: '' };
 
 export default function CreateProductScreen({ navigation, route }) {
     const { user, enableSeller } = useAuth();
@@ -21,9 +23,9 @@ export default function CreateProductScreen({ navigation, route }) {
     const productId = route?.params?.productId;
     const existingProduct = productId ? getProductById(productId) : null;
     const [form, setForm] = useState(existingProduct ? {
-        title: existingProduct.title, description: existingProduct.description, price: String(existingProduct.price), unit: existingProduct.unit,
-        category: existingProduct.category, location: existingProduct.location, image: existingProduct.image || ''
-    } : { ...emptyProduct, location: user.location?.city || emptyProduct.location });
+        title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
+        category: existingProduct.category, municipalityCode: existingProduct.address?.municipalityCode || '', parishCode: existingProduct.address?.parishCode || '', locality: existingProduct.address?.locality || '', latitude: '', longitude: '', locationChanged: !existingProduct.address?.version, image: existingProduct.image || ''
+    } : { ...emptyProduct });
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [imageAsset, setImageAsset] = useState(null);
@@ -32,7 +34,7 @@ export default function CreateProductScreen({ navigation, route }) {
         const nextErrors = validateProduct(form); if (Object.keys(nextErrors).length) return setErrors(nextErrors);
         if (!user.roles?.includes('seller')) return Alert.alert('Perfil de vendedor necessário', 'Ativa primeiro o perfil de vendedor para publicar produtos.');
         if (!imageAsset && !existingProduct?.image) return Alert.alert('Imagem necessária', 'Seleciona uma imagem do produto.');
-        const payload = { ...form, price: Number(form.price) };
+        const payload = { ...form, price: parsePrice(form.price) };
         setSaving(true);
         try {
             if (existingProduct) {
@@ -40,7 +42,7 @@ export default function CreateProductScreen({ navigation, route }) {
                 Alert.alert('Produto atualizado', 'As alterações foram guardadas.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
             } else {
                 const item = await createProduct(payload, imageAsset);
-                setForm({ ...emptyProduct, location: user.location?.city || emptyProduct.location });
+                setForm({ ...emptyProduct });
                 setImageAsset(null);
                 Alert.alert('Anúncio publicado', 'O produto já está disponível no marketplace.', [{ text: 'Ver produto', onPress: () => navigation.navigate('ProductDetails', { productId: item.id }) }]);
             }
@@ -65,17 +67,22 @@ export default function CreateProductScreen({ navigation, route }) {
 
     return <Screen scroll contentContainerStyle={styles.page}>
         <Text style={styles.title}>{existingProduct ? 'Editar produto' : 'O que tens para partilhar?'}</Text>
+        <View style={styles.card}>
         <Pressable accessibilityRole="button" accessibilityLabel="Escolher imagem do produto" onPress={chooseImage} style={styles.placeholder}>
             {imageAsset?.uri || existingProduct?.image
                 ? <Image source={{ uri: imageAsset?.uri || existingProduct.image }} style={styles.preview} />
                 : <><Text style={styles.placeholderIcon}>📷</Text><Text style={styles.placeholderText}>Carregar imagem</Text></>}
         </Pressable>
         <Button title={imageAsset || existingProduct?.image ? 'Alterar imagem' : 'Escolher imagem'} variant="secondary" onPress={chooseImage} />
+        </View>
+        <View style={styles.card}>
         <Input
             label="Título"
             value={form.title}
             onChangeText={update('title')}
             error={errors.title} />
+        </View>
+        <View style={styles.card}>
         <Input
             label="Descrição"
             value={form.description}
@@ -83,31 +90,29 @@ export default function CreateProductScreen({ navigation, route }) {
             multiline
             error={errors.description}
         />
-        <Input
-            label="Preço"
-            value={form.price}
-            onChangeText={update('price')}
-            keyboardType="decimal-pad"
-            error={errors.price}
+        </View>
+        <View style={styles.card}>
+        <ProductPriceInput
+            price={form.price}
+            unit={form.unit}
+            onPriceChange={update('price')}
+            onUnitChange={update('unit')}
+            error={errors.price || errors.unit}
         />
-        <Choice
-            label="Unidade"
-            items={PRODUCT_UNITS}
-            value={form.unit}
-            onChange={update('unit')}
-        />
+        </View>
+        <View style={styles.card}>
         <Choice
             label="Categoria"
             items={mockCategories.slice(1)}
             value={form.category}
             onChange={update('category')}
         />
-        <Input
-            label="Localização"
-            value={form.location}
-            onChangeText={update('location')}
-            error={errors.location}
-        />
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.label}>Localização</Text>
+          <Text style={styles.help}>Indica onde o produto se encontra.</Text>
+          <ProductLocation form={form} setForm={setForm} errors={errors} />
+        </View>
         <Button
             title={existingProduct ? 'Guardar alterações' : 'Publicar anúncio'}
             loading={saving}
@@ -118,24 +123,30 @@ export default function CreateProductScreen({ navigation, route }) {
 }
 
 function Choice({ label, items, value, onChange }) {
+    const [expanded, setExpanded] = useState(false);
+    const initialItems = items.slice(0, 5);
+    if (value && !initialItems.includes(value)) initialItems[4] = value;
+    const visibleItems = expanded ? items : initialItems;
     return <View style={styles.choice}>
         <Text style={styles.label}>{label}</Text>
-        <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.options}
-        >
-            {items.map((item) =>
-                <Chip
-                    key={item}
-                    label={item}
-                    selected={item === value}
-                    onPress={() => onChange(item)}
-                />
-            )}
-        </ScrollView>
-    </View>
-        ;
+        <Text style={styles.help}>Seleciona a categoria principal do produto.</Text>
+        <View style={styles.options}>
+            {visibleItems.map(item => <Chip
+                key={item}
+                label={item}
+                selected={item === value}
+                onPress={() => onChange(item)}
+                style={styles.categoryChip}
+                textStyle={styles.categoryText}
+            />)}
+            {items.length > 5 ? <Chip
+                label={expanded ? '− Menos' : '+ Mais...'}
+                onPress={() => setExpanded(current => !current)}
+                style={[styles.categoryChip, styles.moreChip]}
+                textStyle={[styles.categoryText, { color: colors.primaryDarkFigo }]}
+            /> : null}
+        </View>
+    </View>;
 }
 
 const styles = StyleSheet.create({
@@ -147,6 +158,23 @@ const styles = StyleSheet.create({
     preview: { width: '100%', height: '100%', borderRadius: 18 },
     placeholderIcon: { fontSize: 32 }, placeholderText: { color: colors.textMuted },
     choice: { gap: spacing.sm },
-    label: { color: colors.text, fontWeight: '600' },
-    options: { gap: spacing.sm }
+    card: {
+        backgroundColor: colors.surface,
+        borderRadius: 16,
+        padding: 16,
+        gap: 10,
+        borderWidth: 1,
+        borderColor: '#F0EEEB',
+        shadowColor: '#30263B',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.03,
+        shadowRadius: 6,
+        elevation: 1,
+    },
+    label: { color: '#1E2942', fontSize: 18, fontWeight: '700' },
+    help: { color: '#80889D', fontSize: 14, lineHeight: 20 },
+    options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    categoryChip: { flexBasis: '30%', flexGrow: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 26 },
+    categoryText: { textAlign: 'center' },
+    moreChip: { backgroundColor: '#F8F4FA', borderWidth: 1, borderStyle: 'dashed', borderColor: '#E3D6E9' }
 });

@@ -1,3 +1,8 @@
+import { useState } from 'react';
+import { Alert } from 'react-native';
+import Button from '../../components/common/Button';
+import { productService } from '../../services/productService';
+import { locationService } from '../../services/locationService';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import IconButton from '../../components/common/IconButton';
@@ -16,7 +21,15 @@ import { formatLocation } from '../../utils/formatters';
 
 export default function HomeScreen({ navigation }) {
     const { user } = useAuth();
-    const { products } = useProducts();
+    const { products, cacheProducts, getProductById } = useProducts();
+    const [nearby, setNearby] = useState(null);
+    const [locating, setLocating] = useState(false);
+    const findNearby = async () => {
+      setLocating(true);
+      try { const coords = await locationService.current(); const items = await productService.list({ ...coords, radiusKm: 25, limit: 5 }); setNearby(items); cacheProducts(items); }
+      catch (e) { Alert.alert('Localização', e.message); }
+      finally { setLocating(false); }
+    };
     const open = (item) => navigation.navigate('ProductDetails', { productId: item.id });
 
     return <Screen scroll contentContainerStyle={styles.page}>
@@ -53,19 +66,20 @@ export default function HomeScreen({ navigation }) {
                     onPress={() => navigation.navigate(ROUTES.EXPLORE, { category })}
                 />)}
         </ScrollView>
+        <Button title="Encontrar produtos perto de mim" loading={locating} onPress={findNearby} />
         <Section
-            title="Perto de ti"
+            title="Perto de ti (25 km)"
             action="Ver tudo"
             onAction={() => navigation.navigate(ROUTES.EXPLORE)}
         >
             <ProductList
-                products={products.slice(0, 5)}
+                products={(nearby || []).map(item => getProductById(item.id)).filter(Boolean)}
                 horizontal
                 onProductPress={open}
             />
         </Section>
         <Section title="Produtos recentes">
-            <ProductList products={products.slice(0, 4)} horizontal onProductPress={open} />
+            <ProductList products={[...products].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 4)} horizontal onProductPress={open} />
         </Section>
     </Screen>;
 }

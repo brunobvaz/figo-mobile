@@ -1,4 +1,5 @@
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
 import Screen from '../../components/layout/Screen';
@@ -39,11 +40,23 @@ export default function ProductDetailsScreen({ route, navigation }) {
             <Text style={styles.meta}>📍 {product.location}{product.distance ? ` · ${product.distance}` : ''}</Text>
             <Text style={styles.heading}>Sobre este produto</Text>
             <Text style={styles.description}>{product.description}</Text>
-            <View style={styles.seller}><View style={styles.sellerCopy}>
-                <Text style={styles.heading}>{product.seller.name}</Text>
-                <Text style={styles.meta}>{formatLocation(product.seller.location)}</Text>
-            </View>
-                <Button title="Ver perfil" variant="secondary" onPress={() => navigation.navigate('SellerProfile', { sellerId: product.seller.id })} />
+            <View style={styles.seller}>
+                <Text style={styles.heading}>Vendedor</Text>
+                <View style={styles.sellerRow}>
+                    <Avatar uri={product.seller.avatar} name={product.seller.name} size={52} />
+                    <View style={styles.sellerCopy}>
+                        <Text style={styles.heading}>{product.seller.name}</Text>
+                        <Text style={styles.meta}>{formatLocation(product.seller.location)}</Text>
+                    </View>
+                        <Pressable
+                            accessibilityRole="link"
+                            accessibilityLabel={`Ver perfil de ${product.seller.name}`}
+                            onPress={() => navigation.navigate('SellerProfile', { sellerId: product.seller.id })}
+                            style={({ pressed }) => [styles.profileLink, pressed && { opacity: 0.65 }]}
+                        >
+                            <Text style={styles.profileLinkText}>Ver perfil</Text>
+                        </Pressable>
+                </View>
             </View>
             <Button title={favorite ? 'Remover dos favoritos' : 'Guardar nos favoritos'} variant="secondary" onPress={() => toggleFavorite(product.id)} />
             {!isOwner ? <Button title="Contactar vendedor" onPress={openChat} /> : null}
@@ -62,6 +75,9 @@ const styles = StyleSheet.create({
     meta: { color: colors.textMuted },
     heading: { color: colors.text, fontSize: 17, fontWeight: '700' },
     description: { color: colors.textMuted, lineHeight: 23 },
-    seller: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.cream, gap: spacing.md },
-    sellerCopy: { gap: spacing.xs }
+    seller: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.surface, gap: spacing.md },
+    sellerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+    sellerCopy: { flex: 1, gap: spacing.xs },
+    profileLink: { flexShrink: 0, minHeight: 44, justifyContent: 'center' },
+    profileLinkText: { color: colors.primaryDarkFigo, fontWeight: '600', fontSize: 14, textDecorationLine: 'underline' }
 });

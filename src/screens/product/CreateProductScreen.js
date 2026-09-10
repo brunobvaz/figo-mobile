@@ -1,3 +1,4 @@
+import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
 import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -15,7 +16,7 @@ import ProductPriceInput from '../../components/product/ProductPriceInput';
 import { parsePrice, formatPriceInput } from '../../utils/price';
 import { validateProduct } from '../../utils/validators';
 
-const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'gps', locationChanged: true, image: '' };
+const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
 
 export default function CreateProductScreen({ navigation, route }) {
     const { user, enableSeller } = useAuth();
@@ -24,7 +25,7 @@ export default function CreateProductScreen({ navigation, route }) {
     const existingProduct = productId ? getProductById(productId) : null;
     const [form, setForm] = useState(existingProduct ? {
         title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
-        category: existingProduct.category, municipalityCode: existingProduct.address?.municipalityCode || '', parishCode: existingProduct.address?.parishCode || '', locality: existingProduct.address?.locality || '', latitude: '', longitude: '', locationChanged: !existingProduct.address?.version, image: existingProduct.image || ''
+        locationSource: existingProduct.locationSource, category: existingProduct.category, municipalityCode: existingProduct.address?.municipalityCode || '', parishCode: existingProduct.address?.parishCode || '', locality: existingProduct.address?.locality || '', latitude: '', longitude: '', locationChanged: !existingProduct.address?.version, image: existingProduct.image || ''
     } : { ...emptyProduct });
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
@@ -68,6 +69,7 @@ export default function CreateProductScreen({ navigation, route }) {
     return <Screen scroll contentContainerStyle={styles.page}>
         <Text style={styles.title}>{existingProduct ? 'Editar produto' : 'O que tens para partilhar?'}</Text>
         <View style={styles.card}>
+        <ProductFieldHeading title="Fotografia" subtitle="Escolhe uma fotografia que mostre bem o produto." />
         <Pressable accessibilityRole="button" accessibilityLabel="Escolher imagem do produto" onPress={chooseImage} style={styles.placeholder}>
             {imageAsset?.uri || existingProduct?.image
                 ? <Image source={{ uri: imageAsset?.uri || existingProduct.image }} style={styles.preview} />
@@ -76,15 +78,17 @@ export default function CreateProductScreen({ navigation, route }) {
         <Button title={imageAsset || existingProduct?.image ? 'Alterar imagem' : 'Escolher imagem'} variant="secondary" onPress={chooseImage} />
         </View>
         <View style={styles.card}>
+        <ProductFieldHeading title="Título" subtitle="Dá um nome simples e claro ao produto." />
         <Input
-            label="Título"
+            accessibilityLabel="Título"
             value={form.title}
             onChangeText={update('title')}
             error={errors.title} />
         </View>
         <View style={styles.card}>
+        <ProductFieldHeading title="Descrição" subtitle="Descreve as características e o estado do produto." />
         <Input
-            label="Descrição"
+            accessibilityLabel="Descrição"
             value={form.description}
             onChangeText={update('description')}
             multiline
@@ -109,8 +113,7 @@ export default function CreateProductScreen({ navigation, route }) {
         />
         </View>
         <View style={styles.card}>
-          <Text style={styles.label}>Localização</Text>
-          <Text style={styles.help}>Indica onde o produto se encontra.</Text>
+          <ProductFieldHeading title="Localização" subtitle="Escolhe o concelho e a freguesia onde está o produto." />
           <ProductLocation form={form} setForm={setForm} errors={errors} />
         </View>
         <Button
@@ -128,8 +131,7 @@ function Choice({ label, items, value, onChange }) {
     if (value && !initialItems.includes(value)) initialItems[4] = value;
     const visibleItems = expanded ? items : initialItems;
     return <View style={styles.choice}>
-        <Text style={styles.label}>{label}</Text>
-        <Text style={styles.help}>Seleciona a categoria principal do produto.</Text>
+        <ProductFieldHeading title={label} subtitle="Seleciona a categoria principal do produto." />
         <View style={styles.options}>
             {visibleItems.map(item => <Chip
                 key={item}
@@ -171,8 +173,6 @@ const styles = StyleSheet.create({
         shadowRadius: 6,
         elevation: 1,
     },
-    label: { color: '#1E2942', fontSize: 18, fontWeight: '700' },
-    help: { color: '#80889D', fontSize: 14, lineHeight: 20 },
     options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     categoryChip: { flexBasis: '30%', flexGrow: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 26 },
     categoryText: { textAlign: 'center' },

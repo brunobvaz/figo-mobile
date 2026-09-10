@@ -77,7 +77,7 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
     setMunicipalities(current => current.some(value => value.code === selectedMunicipality.code)
       ? current : [...current, selectedMunicipality]);
     setSavedParishes(items);
-    onChange({ municipalityCode: selectedMunicipality.code, parishCode: item.code });
+    onChange({ municipalityCode: selectedMunicipality.code, parishCode: item.code }, item);
     setOpen(false);
   };
 

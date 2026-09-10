@@ -5,7 +5,7 @@ import { api } from './api';
 const serverBaseUrl = config.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
 const normalizeProduct = (product) => ({
   ...product,
-  distance: Number.isFinite(product.distanceMeters) ? `${(product.distanceMeters / 1000).toFixed(1).replace('.', ',')} km` : undefined,
+  distance: Number.isFinite(product.distanceMeters) ? `${product.locationSource === 'parish' ? '≈ ' : ''}${(product.distanceMeters / 1000).toFixed(1).replace('.', ',')} km` : undefined,
   image: product.imageFilename ? `${serverBaseUrl}/uploads/products/${encodeURIComponent(product.imageFilename)}` : product.image,
   seller: product.seller ? { ...product.seller, avatar: product.seller.avatarFilename ? `${serverBaseUrl}/uploads/avatars/${encodeURIComponent(product.seller.avatarFilename)}` : product.seller.avatar } : product.seller
 });
@@ -13,6 +13,7 @@ const productForm = (product, imageAsset) => {
   const form = new FormData();
   const fields = ['title', 'description', 'price', 'unit', 'category'];
   if (product.locationChanged !== false) fields.push('municipalityCode', 'parishCode', 'locality', 'latitude', 'longitude', 'locationSource');
+  else if (product.localityChanged) fields.push('locality');
   fields.forEach(key => { if (product[key] != null) form.append(key, String(product[key])); });
   if (imageAsset) form.append('image', imageAsset.file || new ExpoFile(imageAsset.uri));
   return form;

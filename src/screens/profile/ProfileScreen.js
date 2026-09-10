@@ -1,3 +1,6 @@
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { productService } from '../../services/productService';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
 import Avatar from '../../components/common/Avatar'; 
@@ -5,7 +8,6 @@ import Button from '../../components/common/Button';
 import Screen from '../../components/layout/Screen'; 
 import useAuth from '../../hooks/useAuth'; 
 import useFavorites from '../../hooks/useFavorites';
-import useProducts from '../../hooks/useProducts'; 
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors'; 
 import spacing from '../../theme/spacing';
@@ -15,8 +17,15 @@ import { formatLocation } from '../../utils/formatters';
 export default function ProfileScreen({ navigation }) { 
     const { user, logout } = useAuth(); 
     const { favoriteIds } = useFavorites();
-    const { products } = useProducts(); 
-    const mine = products.filter((item) => item.seller.id === user.id).length; 
+    const [mine, setMine] = useState(null);
+    useFocusEffect(useCallback(() => {
+        let active = true;
+        setMine(null);
+        if (user?.id) productService.page({ sellerId: user.id, limit: 1 }).then(result => {
+            if (active) setMine(result.pagination.total);
+        }).catch(() => {});
+        return () => { active = false; };
+    }, [user?.id])); 
     const signOut = () => Alert.alert('Terminar sessão?', 'Podes voltar a entrar quando quiseres.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sair', style: 'destructive', onPress: async () => { try { await logout(); } catch { Alert.alert('Não foi possível terminar sessão', 'Confirma a ligação e tenta novamente para desligar esta conta do dispositivo.'); } } }]); 
     
     const enableNotifications = async () => {
@@ -33,7 +42,7 @@ export default function ProfileScreen({ navigation }) {
         <Text style={styles.location}>📍 {formatLocation(user.location)}</Text>
         </View>
         <View style={styles.stat}>
-            <Text style={styles.statNumber}>{mine}</Text>
+            <Text style={styles.statNumber}>{mine ?? '—'}</Text>
             <Text style={styles.statLabel}>Os meus anúncios</Text>
             </View>
             <MenuItem 
@@ -44,7 +53,7 @@ export default function ProfileScreen({ navigation }) {
             <MenuItem 
             icon="leaf-outline" 
             label="Os meus anúncios" 
-            detail={`${mine}`} onPress={() => navigation.navigate('ExploreTab')} 
+            detail={mine == null ? '—' : `${mine}`} onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS)} 
             />
             <MenuItem
             icon="heart-outline"

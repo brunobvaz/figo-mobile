@@ -9,6 +9,9 @@ import ProductPrice from './ProductPrice';
 export default function ProductCard({ product, onPress, compact = false }) {
     const { isFavorite, toggleFavorite } = useFavorites();
     const favorite = isFavorite(product.id);
+    const locality = product.address?.locality || product.location;
+    const administrativeLocation = [product.address?.municipality, product.address?.parish].filter(Boolean).join(' · ');
+    const locationNote = [product.locationSource === 'parish' ? 'Localização aproximada' : '', product.distance].filter(Boolean).join(' · ');
 
     return <Pressable onPress={onPress} style={[styles.card, compact && styles.compact]}>
         <View><Image
@@ -38,8 +41,14 @@ export default function ProductCard({ product, onPress, compact = false }) {
             <Text
                 numberOfLines={1}
                 style={styles.meta}>
-                📍 {product.location}{product.distance ? ` · ${product.distance}` : ''}
+                📍 {locality}
             </Text>
+            {administrativeLocation ? <Text numberOfLines={1} style={styles.meta}>
+                <Ionicons name="map-outline" size={12} color={colors.textMuted} /> {administrativeLocation}
+            </Text> : null}
+            {locationNote ? <Text numberOfLines={1} style={styles.meta}>
+                {locationNote}
+            </Text> : null}
             <Text
                 numberOfLines={1}
                 style={styles.seller}>

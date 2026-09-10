@@ -9,6 +9,7 @@ export const ROUTES = {
     HOME: 'HomeTab', 
     EXPLORE: 'ExploreTab', 
     SELL: 'SellTab', 
+    MY_PRODUCTS: 'MyProducts',
     FAVORITES: 'FavoritesTab', 
     PROFILE: 'ProfileTab', 
     PRODUCT_DETAILS: 'ProductDetails', 

@@ -37,7 +37,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
             <Text style={styles.category}>{product.category}</Text>
             <Text style={styles.title}>{product.title}</Text>
             <ProductPrice price={product.price} unit={product.unit} large />
-            <Text style={styles.meta}>📍 {product.location}{product.distance ? ` · ${product.distance}` : ''}</Text>
+            <Text style={styles.meta}>📍 {product.location}{product.locationSource === 'parish' ? ' · Localização aproximada' : ''}{product.distance ? ` · ${product.distance}` : ''}</Text>
             <Text style={styles.heading}>Sobre este produto</Text>
             <Text style={styles.description}>{product.description}</Text>
             <View style={styles.seller}>

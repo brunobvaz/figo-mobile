@@ -7,6 +7,7 @@ import { useChat } from '../context/ChatContext';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ConversationsScreen from '../screens/chat/ConversationsScreen';
 import ExploreScreen from '../screens/explore/ExploreScreen'; 
+import AccountProductsScreen from '../screens/profile/AccountProductsScreen';
 import FavoritesScreen from '../screens/favorites/FavoritesScreen'; 
 import HomeScreen from '../screens/home/HomeScreen'; 
 import OrdersScreen from '../screens/orders/OrdersScreen'; 
@@ -56,6 +57,7 @@ export default function MainNavigator() {
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
                 <Stack.Screen name={ROUTES.EDIT_PRODUCT} component={CreateProductScreen} options={{ title: 'Editar produto' }} />
                 <Stack.Screen getId={({ params }) => params?.conversationId || params?.productId} name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />
+                <Stack.Screen name={ROUTES.MY_PRODUCTS} component={AccountProductsScreen} options={{ title: 'Os meus anúncios' }} />
                 <Stack.Screen name={ROUTES.FAVORITES} component={FavoritesScreen} options={{ title: 'Favoritos' }} />
                 <Stack.Screen name={ROUTES.SELLER_PROFILE} component={SellerProfileScreen} options={{ title: 'Produtor' }} />
                 <Stack.Screen name={ROUTES.EDIT_PROFILE} component={EditProfileScreen} options={{ title: 'Editar perfil' }} />

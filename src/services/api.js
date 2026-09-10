@@ -60,7 +60,9 @@ const request = async (path, options = {}, allowRefresh = true) => {
     return payload?.data;
   } catch (error) {
     if (controller.signal.aborted || error.name === 'AbortError') throw new Error('O pedido demorou demasiado tempo.');
-    if (error instanceof TypeError) throw new Error('Não foi possível ligar ao servidor. Confirma a ligação à internet.');
+    if (error instanceof TypeError && /network request failed|failed to fetch|networkerror|load failed|network connection/i.test(error.message)) {
+      throw new Error(`Não foi possível ligar a ${new URL(config.apiBaseUrl).host}. Tenta novamente por Wi-Fi ou dados móveis.`);
+    }
     throw error;
   } finally { clearTimeout(timeout); }
 };

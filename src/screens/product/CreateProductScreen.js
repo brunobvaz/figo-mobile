@@ -2,6 +2,8 @@ import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
 import { useState } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
 import * as ImagePicker from 'expo-image-picker';
 import Button from '../../components/common/Button';
 import Chip from '../../components/common/Chip';
@@ -16,7 +18,7 @@ import ProductPriceInput from '../../components/product/ProductPriceInput';
 import { parsePrice, formatPriceInput } from '../../utils/price';
 import { validateProduct } from '../../utils/validators';
 
-const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
+const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', seasonality: 'all_year', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
 
 export default function CreateProductScreen({ navigation, route }) {
     const { user, enableSeller } = useAuth();
@@ -25,6 +27,7 @@ export default function CreateProductScreen({ navigation, route }) {
     const existingProduct = productId ? getProductById(productId) : null;
     const [form, setForm] = useState(existingProduct ? {
         title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
+        seasonality: existingProduct.seasonality ?? 'all_year',
         locationSource: existingProduct.locationSource, category: existingProduct.category, municipalityCode: existingProduct.address?.municipalityCode || '', parishCode: existingProduct.address?.parishCode || '', locality: existingProduct.address?.locality || '', latitude: '', longitude: '', locationChanged: !existingProduct.address?.version, image: existingProduct.image || ''
     } : { ...emptyProduct });
     const [errors, setErrors] = useState({});
@@ -113,6 +116,21 @@ export default function CreateProductScreen({ navigation, route }) {
         />
         </View>
         <View style={styles.card}>
+          <ProductFieldHeading title="Sazonalidade" subtitle="Indica em que época do ano o produto está disponível." />
+          <View style={styles.options}>
+            {SEASONALITY_OPTIONS.map(option => {
+              const selected = form.seasonality === option.value;
+              return <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
+                accessibilityState={{ checked: selected, disabled: saving }} disabled={saving}
+                onPress={() => update('seasonality')(option.value)}
+                style={[styles.seasonOption, selected && styles.seasonSelected]}>
+                <Ionicons name={option.icon} size={21} color={selected ? colors.surface : colors.text} />
+                <Text style={[styles.seasonText, selected && styles.seasonSelectedText]}>{option.label}</Text>
+              </Pressable>;
+            })}
+          </View>
+        </View>
+        <View style={styles.card}>
           <ProductFieldHeading title="Localização" subtitle="Escolhe o concelho e a freguesia onde está o produto." />
           <ProductLocation form={form} setForm={setForm} errors={errors} />
         </View>
@@ -174,6 +192,10 @@ const styles = StyleSheet.create({
         elevation: 1,
     },
     options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    seasonOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 14, backgroundColor: colors.cream },
+    seasonSelected: { backgroundColor: colors.primaryFigo },
+    seasonText: { color: colors.text, fontSize: 15, flexShrink: 1 },
+    seasonSelectedText: { color: colors.surface, fontWeight: '600' },
     categoryChip: { flexBasis: '30%', flexGrow: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 26 },
     categoryText: { textAlign: 'center' },
     moreChip: { backgroundColor: '#F8F4FA', borderWidth: 1, borderStyle: 'dashed', borderColor: '#E3D6E9' }

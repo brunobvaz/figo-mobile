@@ -9,7 +9,9 @@ import ConversationsScreen from '../screens/chat/ConversationsScreen';
 import ExploreScreen from '../screens/explore/ExploreScreen'; 
 import AccountProductsScreen from '../screens/profile/AccountProductsScreen';
 import FavoritesScreen from '../screens/favorites/FavoritesScreen'; 
-import HomeScreen from '../screens/home/HomeScreen'; 
+import HomeScreen from '../screens/home/HomeScreen';
+import SeasonalRecipesScreen from '../screens/recipes/SeasonalRecipesScreen';
+import FairsEventsScreen from '../screens/events/FairsEventsScreen'; 
 import OrdersScreen from '../screens/orders/OrdersScreen'; 
 import CreateProductScreen from '../screens/product/CreateProductScreen'; 
 import ProductDetailsScreen from '../screens/product/ProductDetailsScreen'; 
@@ -54,6 +56,8 @@ function TabNavigator() {
 export default function MainNavigator() { 
     return <Stack.Navigator screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
                 <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
+                <Stack.Screen name={ROUTES.SEASONAL_RECIPES} component={SeasonalRecipesScreen} options={{ title: 'Receitas da época' }} />
+                <Stack.Screen name={ROUTES.FAIRS_EVENTS} component={FairsEventsScreen} options={{ title: 'Feiras e eventos' }} />
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
                 <Stack.Screen name={ROUTES.EDIT_PRODUCT} component={CreateProductScreen} options={{ title: 'Editar produto' }} />
                 <Stack.Screen getId={({ params }) => params?.conversationId || params?.productId} name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />

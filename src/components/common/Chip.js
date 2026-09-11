@@ -1,4 +1,5 @@
 import { Pressable, StyleSheet, Text } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import typography from '../../theme/typography';
@@ -11,7 +12,8 @@ export default function Chip({
     onPress,
     style,
     textStyle,
-    accessibilityLabel
+    accessibilityLabel,
+    trailingIcon
 }) {
     const outlined = variant === 'outlined';
 
@@ -23,6 +25,7 @@ export default function Chip({
         onPress={onPress}
         style={({ pressed }) => [
             styles.chip,
+            trailingIcon && styles.withIcon,
             outlined && styles.outlined,
             selected && (outlined ? styles.outlinedSelected : styles.selected),
             pressed && styles.pressed,
@@ -38,10 +41,14 @@ export default function Chip({
         ]}>
             {label}
         </Text>
+        {trailingIcon ? <Ionicons name={trailingIcon} size={14}
+            color={StyleSheet.flatten(textStyle)?.color || (outlined ? colors.primaryDarkFigo : selected ? colors.surface : colors.text)}
+            accessible={false} /> : null}
     </Pressable>;
 }
 
 const styles = StyleSheet.create({
+    withIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     chip: {
         paddingHorizontal: spacing.md,
         paddingVertical: 10,

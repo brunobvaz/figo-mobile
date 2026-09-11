@@ -1,104 +1,82 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { ActivityIndicator, Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
-import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Header from '../../components/layout/Header';
 import Screen from '../../components/layout/Screen';
 import ProductList from '../../components/product/ProductList';
-import HomeFilters, { PRICE_FILTERS } from '../../components/home/HomeFilters';
-import { productService } from '../../services/productService';
-import { locationService } from '../../services/locationService';
+import ProducerCard from '../../components/product/ProducerCard';
+import HomeDiscover from '../../components/home/HomeDiscover';
 import useAuth from '../../hooks/useAuth';
 import useProducts from '../../hooks/useProducts';
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import { formatLocation } from '../../utils/formatters';
+import { discoveryProducts, nearbyProducts, quickCategories } from '../../utils/homeDiscovery';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
-  const { cacheProducts, getProductById } = useProducts();
+  const { products, isLoading } = useProducts();
   const [query, setQuery] = useState('');
-  const [category, setCategory] = useState('');
-  const [price, setPrice] = useState('');
-  const [sort, setSort] = useState('recent');
-  const [radius, setRadius] = useState(25);
-  const [nearby, setNearby] = useState(false);
-  const [coords, setCoords] = useState(null);
-  const [locating, setLocating] = useState(false);
-  const [results, setResults] = useState([]);
-  const [pagination, setPagination] = useState(null);
-  const [busy, setBusy] = useState(true);
-  const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-  const generation = useRef(0);
-  const locationRequest = useRef(0);
-  const loadingPage = useRef(false);
-  useEffect(() => () => { locationRequest.current++; }, []);
-  const toggleNearby = async enabled => {
-    const id = ++locationRequest.current;
-    if (!enabled) {
-      setNearby(false); setLocating(false);
-      setSort(current => current === 'distance' ? 'recent' : current);
-      return;
-    }
-    if (coords) { setNearby(true); return; }
-    setLocating(true);
-    try {
-      const position = await locationService.current();
-      if (locationRequest.current !== id) return;
-      setCoords(position); setNearby(true);
-    } catch (e) { if (locationRequest.current === id) Alert.alert('Localização', e.message); }
-    finally { if (locationRequest.current === id) setLocating(false); }
+  const feed = useMemo(() => discoveryProducts(products), [products]);
+  const nearby = useMemo(() => nearbyProducts(feed), [feed]);
+  const producers = useMemo(() => [...new Map(feed.filter(item => item.seller?.id)
+    .map(item => [item.seller.id, item.seller])).values()], [feed]);
+  // Each shortcut replaces the complete filter payload, avoiding stale tab filters.
+  const explore = (filters = {}) => navigation.navigate(ROUTES.EXPLORE, { filters });
+  const openProduct = item => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id });
+  const openProducers = () => {
+    // TODO: connect a producer directory when that screen exists.
+    Alert.alert('Produtores', 'Toca num produtor para conhecer o seu perfil e produtos.');
   };
-  const clear = () => {
-    locationRequest.current++; setLocating(false);
-    setQuery(''); setCategory(''); setPrice(''); setSort('recent'); setRadius(25); setNearby(false);
-  };
-  const params = useMemo(() => {
-    const range = PRICE_FILTERS.find(item => item.value === price) || {};
-    return { search: query.trim(), category, minPrice: range.minPrice, maxPrice: range.maxPrice, sort, ...(nearby ? coords : {}), radiusKm: radius, limit: 20 };
-  }, [query, category, price, sort, nearby, coords, radius]);
-  const load = useCallback(async (page, id) => {
-    if (loadingPage.current) return;
-    loadingPage.current = true; setBusy(true); setError('');
-    try {
-      const response = await productService.page({ ...params, page });
-      if (generation.current !== id) return;
-      setResults(current => page === 1 ? response.items : [...new Map([...current, ...response.items].map(item => [item.id, item])).values()]);
-      setPagination(response.pagination); cacheProducts(response.items);
-    } catch (e) { if (generation.current === id) setError(e.message); }
-    finally { if (generation.current === id) { setBusy(false); loadingPage.current = false; } }
-  }, [params, cacheProducts]);
-  useFocusEffect(useCallback(() => {
-    const id = ++generation.current;
-    loadingPage.current = false;
-    setResults([]); setPagination(null); setBusy(true); setError('');
-    const timer = setTimeout(() => load(1, id), 250);
-    return () => { clearTimeout(timer); generation.current++; };
-  }, [load, retry]));
-  const filtered = Boolean(query.trim() || category || price || nearby || sort !== 'recent');
-  const visible = results.map(item => getProductById(item.id)).filter(Boolean);
+  const sectionHeader = (title, onPress) => <View style={styles.sectionHeader}>
+    <Text accessibilityRole="header" style={styles.title}>{title}</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos: ${title}`} onPress={onPress} style={styles.viewAll}>
+      <Text style={styles.link}>Ver todos →</Text>
+    </Pressable>
+  </View>;
+  const productSection = (title, items, filters, variant) => items.length ? <View style={[styles.section, styles[variant]]}>
+    {sectionHeader(title, () => explore(filters))}
+    <ProductList products={items} horizontal variant={variant} onProductPress={openProduct} />
+  </View> : null;
   return <Screen scroll contentContainerStyle={styles.page}>
-    <Header title={`Olá, ${user.name.split(' ')[0]}`} subtitle="Descobre o que há perto de ti" location={formatLocation(user.location)} right={
-      <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => navigation.navigate(ROUTES.PROFILE)}><Avatar uri={user.avatar} name={user.name} size={48} /></Pressable>
+    <Header title={`Olá, ${user?.name?.split(' ')[0] || 'Bruno'}`} subtitle="Descobre o que há perto de ti" location={formatLocation(user?.location)} right={
+      <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => navigation.navigate(ROUTES.PROFILE)}><Avatar uri={user?.avatar} name={user?.name || ''} size={48} /></Pressable>
     } />
-    <Input leadingIcon="search-outline" accessibilityLabel="Pesquisar produtos locais" placeholder="Pesquisar produtos locais…" value={query} onChangeText={setQuery} returnKeyType="search" />
-    <HomeFilters {...{ category, setCategory, price, setPrice, sort, setSort, radius, setRadius, nearby, locating, clear, query }} clearQuery={() => setQuery('')} onNearbyChange={toggleNearby} />
-    <View style={styles.sectionHeader}><Text style={styles.title}>{filtered ? 'Produtos encontrados' : 'Produtos recentes'}</Text>{pagination ? <Text style={styles.count}>{pagination.total}</Text> : null}</View>
-    {nearby ? <Text style={styles.help}>Distâncias aproximadas em linha reta, até {radius} km.</Text> : null}
-    {busy && !results.length ? <ActivityIndicator color={colors.primaryFigo} /> : null}
-    {error ? <><Text style={styles.error}>{error}</Text><Button title="Tentar novamente" variant="secondary" onPress={() => pagination ? load(pagination.page + 1, generation.current) : setRetry(value => value + 1)} /></> : null}
-    {visible.length ? <ProductList products={visible} horizontal onProductPress={item => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id })} />
-      : !busy && !error ? <View style={styles.empty}><Text style={styles.title}>Sem produtos</Text><Text style={styles.help}>Não encontrámos produtos com estes filtros.</Text>{filtered ? <Button title="Limpar filtros" variant="secondary" onPress={clear} /> : null}</View> : null}
-    {pagination?.page < pagination?.pages && !error ? <Button title="Carregar mais" variant="secondary" loading={busy} onPress={() => load(pagination.page + 1, generation.current)} /> : null}
+    <Input leadingIcon="search-outline" accessibilityLabel="Pesquisar produtos locais" placeholder="Pesquisar produtos locais..." value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={() => explore({ query: query.trim() })} />
+    <View style={styles.categories}>
+      {quickCategories.map(([name, emoji]) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} style={styles.category} onPress={() => explore(name === 'Mais' ? {} : { category: name })}>
+        <Text style={styles.emoji}>{emoji}</Text><Text numberOfLines={1} style={styles.categoryLabel}>{name}</Text>
+      </Pressable>)}
+    </View>
+    {isLoading ? <ActivityIndicator color={colors.primaryFigo} /> : null}
+    {productSection('Produtos em destaque', feed.filter(item => item.featured === true), { featured: true }, 'featured')}
+    {productSection('Perto de ti', nearby, { radiusKm: 10, sortBy: 'distance', viewMode: 'list' }, 'nearby')}
+    {productSection('Da época', feed.filter(item => item.seasonal === true), { seasonal: true }, 'seasonal')}
+    {producers.length ? <View style={[styles.section, styles.producerSection]}>
+      {sectionHeader('Produtores em destaque', openProducers)}
+      <FlatList horizontal data={producers} keyExtractor={item => String(item.id)} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.producers}
+        renderItem={({ item }) => <ProducerCard producer={item} onPress={() => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: item.id })} />} />
+    </View> : null}
+    {!isLoading && !feed.length ? <Text style={styles.help}>Ainda não há produtos disponíveis para descobrir.</Text> : null}
+    <HomeDiscover />
   </Screen>;
 }
 const styles = StyleSheet.create({
   page: { paddingTop: spacing.md, gap: spacing.md },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 21, color: colors.text, fontWeight: '700' }, count: { color: colors.textMuted },
-  help: { color: colors.textMuted, fontSize: 13, lineHeight: 19 }, error: { color: colors.error }, empty: { paddingVertical: 24, gap: 12, alignItems: 'center' }
+  section: { gap: spacing.xs, marginHorizontal: -spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, borderRadius: 18 },
+  featured: { backgroundColor: '#FFEA99' },
+  nearby: { backgroundColor: '#EDE9FE' },
+  seasonal: { backgroundColor: '#D1FAE5' },
+  producerSection: { backgroundColor: '#FCE7F3' },
+  sectionHeader: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.xs },
+  title: { fontSize: 21, color: colors.text, fontWeight: '700', flexShrink: 1 },
+  viewAll: { minHeight: 44, justifyContent: 'center' },
+  link: { color: colors.primaryDarkFigo, fontWeight: '600', fontSize: 14 },
+  help: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
+  producers: { gap: spacing.md, paddingVertical: spacing.sm },
+  categories: { flexDirection: 'row', gap: 6 },
+  category: { flex: 1, minWidth: 44, alignItems: 'center', gap: 6, paddingVertical: 12, backgroundColor: colors.cream, borderRadius: 14 },
+  emoji: { fontSize: 23 }, categoryLabel: { fontSize: 10, color: colors.text },
 });

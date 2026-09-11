@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import MessageBubble from '../../components/common/MessageBubble';
@@ -19,6 +21,8 @@ export default function ChatScreen({ route, navigation }) {
   const { user } = useAuth();
   const { refresh } = useChat();
   const focused = useIsFocused();
+  const headerHeight = useHeaderHeight();
+  const insets = useSafeAreaInsets();
   const [appState, setAppState] = useState(AppState.currentState);
   const [id, setId] = useState(initialId);
   const [message, setMessage] = useState('');
@@ -37,6 +41,15 @@ export default function ChatScreen({ route, navigation }) {
   const readPending = useRef(new Set());
   const acknowledged = useRef(new Set());
   const list = useRef(null);
+  const nearLatest = useRef(true);
+  const scrollToLatest = useCallback(() => {
+    nearLatest.current = true;
+    // The list is inverted: offset zero is the newest message, above the composer.
+    list.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
+  const keepLatestVisible = useCallback(() => {
+    if (nearLatest.current) list.current?.scrollToOffset({ offset: 0, animated: false });
+  }, []);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
   active.current = focused && appState === 'active';
   const updateMessages = useCallback((incoming) => {
@@ -118,7 +131,7 @@ export default function ChatScreen({ route, navigation }) {
     const pending = retry || { id: createId('pending'), clientId: createId('message'), senderId: user.id, text, createdAt: new Date().toISOString() };
     updateMessages([{ ...pending, status: 'sending' }]);
     if (!retry) setMessage('');
-    list.current?.scrollToOffset({ offset: 0, animated: true });
+    scrollToLatest();
     try {
       const saved = await chatService.send(id, text, pending.clientId);
       if (alive.current) { updateMessages([saved]); refresh(); setError(null); }
@@ -141,15 +154,21 @@ export default function ChatScreen({ route, navigation }) {
     finally { if (alive.current) setLoadingOlder(false); }
   };
 
-  return <Screen contentContainerStyle={styles.page}>
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90} style={styles.keyboard}>
+  // Android already resizes the window (softwareKeyboardLayoutMode: resize).
+  // On iOS resize the whole conversation, including the composer, below the native header.
+  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
+    <Screen contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
       <View style={styles.context}>
         {productTitle ? <Text style={sharedStyles.sectionTitle}>{productTitle}</Text> : null}
         <Text style={sharedStyles.helperNote}>Conversa com {participantName || sellerName || 'utilizador'}</Text>
       </View>
       {error ? <View><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Tentar novamente" variant="secondary" onPress={() => setAttempt((value) => value + 1)} /></View> : null}
       <FlatList ref={list} inverted data={[...messages].reverse()} keyExtractor={(item) => `${item.senderId}:${item.clientId}`}
+        style={styles.list}
         contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets={false}
+        onLayout={keepLatestVisible} onContentSizeChange={keepLatestVisible}
+        onScroll={({ nativeEvent }) => { nearLatest.current = nativeEvent.contentOffset.y <= spacing.xl; }} scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig}
         ListEmptyComponent={<Text style={sharedStyles.helperNote}>{loading ? 'A carregar mensagens…' : 'Ainda não existem mensagens. Escreve para iniciar a conversa.'}</Text>}
         ListFooterComponent={cursor ? <Button title="Mensagens anteriores" variant="secondary" loading={loadingOlder} onPress={loadOlder} /> : null}
@@ -160,14 +179,16 @@ export default function ChatScreen({ route, navigation }) {
         </View>}
       />
       <View style={styles.composer}>
-        <Input placeholder="Escreve uma mensagem..." value={message} onChangeText={setMessage} maxLength={2000} returnKeyType="send" blurOnSubmit={false} onSubmitEditing={() => send()} style={styles.messageInput} />
+        <Input placeholder="Escreve uma mensagem..." value={message} onChangeText={setMessage} onFocus={scrollToLatest} maxLength={2000} returnKeyType="send" blurOnSubmit={false} onSubmitEditing={() => send()} style={styles.messageInput} />
         <Button title="Enviar" loading={sending} disabled={!id || !message.trim() || sending} onPress={() => send()} style={styles.sendButton} />
       </View>
-    </KeyboardAvoidingView>
-  </Screen>;
+    </Screen>
+  </KeyboardAvoidingView>;
 }
 const styles = StyleSheet.create({
-  page: { paddingTop: spacing.md }, keyboard: { flex: 1, gap: spacing.md },
+  page: { flex: 1, minHeight: 0, paddingTop: spacing.md, gap: spacing.md },
+  keyboard: { flex: 1, backgroundColor: colors.background },
+  list: { flex: 1, minHeight: 0 },
   context: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.cream, gap: spacing.xs },
   messages: { flexGrow: 1, gap: spacing.sm, paddingVertical: spacing.sm },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },

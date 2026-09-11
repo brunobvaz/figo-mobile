@@ -1,17 +1,20 @@
 import { File as ExpoFile } from 'expo-file-system';
+import { isProductInSeason } from '../utils/productSeasonality';
 import config from '../config/config';
 import { api } from './api';
 
 const serverBaseUrl = config.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
 const normalizeProduct = (product) => ({
   ...product,
+  seasonality: product.seasonality ?? 'all_year',
+  seasonal: isProductInSeason(product),
   distance: Number.isFinite(product.distanceMeters) ? `${product.locationSource === 'parish' ? '≈ ' : ''}${(product.distanceMeters / 1000).toFixed(1).replace('.', ',')} km` : undefined,
   image: product.imageFilename ? `${serverBaseUrl}/uploads/products/${encodeURIComponent(product.imageFilename)}` : product.image,
   seller: product.seller ? { ...product.seller, avatar: product.seller.avatarFilename ? `${serverBaseUrl}/uploads/avatars/${encodeURIComponent(product.seller.avatarFilename)}` : product.seller.avatar } : product.seller
 });
 const productForm = (product, imageAsset) => {
   const form = new FormData();
-  const fields = ['title', 'description', 'price', 'unit', 'category'];
+  const fields = ['title', 'description', 'price', 'unit', 'category', 'seasonality'];
   if (product.locationChanged !== false) fields.push('municipalityCode', 'parishCode', 'locality', 'latitude', 'longitude', 'locationSource');
   else if (product.localityChanged) fields.push('locality');
   fields.forEach(key => { if (product[key] != null) form.append(key, String(product[key])); });

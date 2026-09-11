@@ -11,6 +11,7 @@ import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import { formatLocation } from '../../utils/formatters';
+import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
 
 export default function ProductDetailsScreen({ route, navigation }) {
     const { getProductById, removeProduct } = useProducts();
@@ -18,6 +19,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
     const { isFavorite, toggleFavorite } = useFavorites();
     const product = getProductById(route.params.productId); if (!product) return <Loading />;
     const favorite = isFavorite(product.id);
+    const season = SEASONALITY_OPTIONS.find(option => option.value !== 'all_year' && option.value === product.seasonality);
     const isOwner = product.seller?.id === user.id;
     const confirmRemoval = () => Alert.alert('Remover produto?', 'O anúncio deixará de aparecer no marketplace.', [
         { text: 'Cancelar', style: 'cancel' },
@@ -40,6 +42,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
             <Text style={styles.meta}>📍 {product.location}{product.locationSource === 'parish' ? ' · Localização aproximada' : ''}{product.distance ? ` · ${product.distance}` : ''}</Text>
             <Text style={styles.heading}>Sobre este produto</Text>
             <Text style={styles.description}>{product.description}</Text>
+            {season ? <Text style={styles.seasonality}>Época: {season.label}</Text> : null}
             <View style={styles.seller}>
                 <Text style={styles.heading}>Vendedor</Text>
                 <View style={styles.sellerRow}>
@@ -75,6 +78,7 @@ const styles = StyleSheet.create({
     meta: { color: colors.textMuted },
     heading: { color: colors.text, fontSize: 17, fontWeight: '700' },
     description: { color: colors.textMuted, lineHeight: 23 },
+    seasonality: { color: colors.primaryDark, fontWeight: '600', lineHeight: 23 },
     seller: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.surface, gap: spacing.md },
     sellerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     sellerCopy: { flex: 1, gap: spacing.xs },

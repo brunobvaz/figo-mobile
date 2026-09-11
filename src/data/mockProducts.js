@@ -1,5 +1,5 @@
 import { mockSellers } from './mockUsers';
-const product = (id, title, description, price, unit, category, image, location, distance, sellerIndex, createdAt) => ({ id, title, description, price, unit, category, image, location, distance, seller: mockSellers[sellerIndex], createdAt });
+const product = (id, title, description, price, unit, category, image, location, distance, sellerIndex, createdAt) => ({ id, title, description, price, unit, category, image, location, distance, seller: mockSellers[sellerIndex], createdAt, featured: ['p1', 'p2', 'p3'].includes(id), seasonal: ['p1', 'p4'].includes(id) });
 export default [
   product('p1', 'Tomate coração de boi', 'Tomate maduro, carnudo e colhido esta manhã. Ideal para saladas.', 2.6, '€/kg', 'Legumes', 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=900', 'Ponte de Lima', '1,2 km', 0, '2026-08-31T09:00:00Z'),
   product('p2', 'Mel artesanal', 'Mel multifloral cru das encostas do rio Vez, frasco de 500 g.', 7.5, '€/frasco', 'Mel', 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=900', 'Arcos de Valdevez', '7 km', 1, '2026-08-30T12:00:00Z'),

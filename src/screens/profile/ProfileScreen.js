@@ -12,7 +12,7 @@ import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors'; 
 import spacing from '../../theme/spacing';
 import { registerPushNotifications } from '../../services/pushNotifications';
-import { formatLocation } from '../../utils/formatters';
+import { locationLabel, profileLocation } from '../../utils/activeLocation';
 
 export default function ProfileScreen({ navigation }) { 
     const { user, logout } = useAuth(); 
@@ -39,7 +39,7 @@ export default function ProfileScreen({ navigation }) {
     return <Screen scroll contentContainerStyle={styles.page}>
         <View style={styles.profile}><Avatar uri={user.avatar} name={user.name} size={88} />
         <Text style={styles.name}>{user.name}</Text><Text style={styles.email}>{user.email}</Text>
-        <Text style={styles.location}>📍 {formatLocation(user.location)}</Text>
+        <Text style={styles.location}>📍 {locationLabel(profileLocation(user.location))}</Text>
         </View>
         <View style={styles.stat}>
             <Text style={styles.statNumber}>{mine ?? '—'}</Text>

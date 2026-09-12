@@ -3,6 +3,9 @@ import { AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, V
 import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import ProductContextCard from '../../components/chat/ProductContextCard';
+import useConversationProduct from '../../hooks/useConversationProduct';
+import { ROUTES } from '../../navigation/routes';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import MessageBubble from '../../components/common/MessageBubble';
@@ -17,7 +20,7 @@ import { createId } from '../../utils/helpers';
 import { mergeMessages } from '../../utils/chatMessages';
 
 export default function ChatScreen({ route, navigation }) {
-  const { conversationId: initialId, productId, productTitle, participantName, sellerName } = route.params || {};
+  const { conversationId: initialId, productId, productTitle } = route.params || {};
   const { user } = useAuth();
   const { refresh } = useChat();
   const focused = useIsFocused();
@@ -25,6 +28,7 @@ export default function ChatScreen({ route, navigation }) {
   const insets = useSafeAreaInsets();
   const [appState, setAppState] = useState(AppState.currentState);
   const [id, setId] = useState(initialId);
+  const contextProduct = useConversationProduct({ conversationId: id, productId, productTitle, focused });
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -158,10 +162,8 @@ export default function ChatScreen({ route, navigation }) {
   // On iOS resize the whole conversation, including the composer, below the native header.
   return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
     <Screen contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
-      <View style={styles.context}>
-        {productTitle ? <Text style={sharedStyles.sectionTitle}>{productTitle}</Text> : null}
-        <Text style={sharedStyles.helperNote}>Conversa com {participantName || sellerName || 'utilizador'}</Text>
-      </View>
+      <ProductContextCard product={contextProduct.product} title={contextProduct.title} loading={contextProduct.loading}
+        onPress={() => navigation.push(ROUTES.PRODUCT_DETAILS, { productId: contextProduct.productId })} />
       {error ? <View><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Tentar novamente" variant="secondary" onPress={() => setAttempt((value) => value + 1)} /></View> : null}
       <FlatList ref={list} inverted data={[...messages].reverse()} keyExtractor={(item) => `${item.senderId}:${item.clientId}`}
         style={styles.list}
@@ -189,7 +191,6 @@ const styles = StyleSheet.create({
   page: { flex: 1, minHeight: 0, paddingTop: spacing.md, gap: spacing.md },
   keyboard: { flex: 1, backgroundColor: colors.background },
   list: { flex: 1, minHeight: 0 },
-  context: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.cream, gap: spacing.xs },
   messages: { flexGrow: 1, gap: spacing.sm, paddingVertical: spacing.sm },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   messageInput: { flex: 1 }, sendButton: { paddingHorizontal: spacing.md },

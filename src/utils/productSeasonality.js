@@ -20,3 +20,9 @@ export function isProductInSeason(product, date = new Date()) {
   const seasonality = product.seasonality ?? 'all_year';
   return seasonality === 'all_year' || seasonality === currentProductSeason(date);
 }
+
+// Editorial selection is deliberately narrower than general availability.
+export function isExplicitlyInSeason(product, season = currentProductSeason()) {
+  const seasons = Array.isArray(product.seasons) ? product.seasons : [product.seasonality];
+  return season !== 'all_year' && !seasons.includes('all_year') && seasons.includes(season);
+}

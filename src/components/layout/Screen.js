@@ -20,7 +20,7 @@ export default function Screen({ children, scroll = false, contentContainerStyle
             keyboardDismissMode="on-drag"
         >
             {children}
-        </ScrollView> : <View style={[styles.content, contentContainerStyle]}>
+        </ScrollView> : <View style={[styles.content, styles.fixedContent, contentContainerStyle]}>
             {children}
         </View>}
     </SafeAreaView>;
@@ -29,5 +29,6 @@ export default function Screen({ children, scroll = false, contentContainerStyle
 const styles = StyleSheet.create({
     safe: { flex: 1, backgroundColor: colors.background },
     scroll: { flex: 1 },
+    fixedContent: { flex: 1, minHeight: 0 },
     content: { flexGrow: 1, paddingHorizontal: spacing.md, paddingBottom: spacing.lg }
 });

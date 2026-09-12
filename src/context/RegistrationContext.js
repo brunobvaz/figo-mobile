@@ -1,7 +1,7 @@
 import { createContext, useCallback, useMemo, useState } from 'react';
 
 const initialRegistration = {
-  firstName: '', lastName: '', email: '', phone: '', password: '', passwordConfirmation: ''
+  firstName: '', lastName: '', email: '', password: '', passwordConfirmation: ''
 };
 
 export const RegistrationContext = createContext(null);

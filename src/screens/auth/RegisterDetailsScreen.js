@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Button from '../../components/common/Button';
 import Chip from '../../components/common/Chip';
-import Input from '../../components/common/Input';
+import AddressSelect from '../../components/common/AddressSelect';
 import Screen from '../../components/layout/Screen';
 import useRegistration from '../../hooks/useRegistration';
 import { ROUTES } from '../../navigation/routes';
@@ -13,21 +13,19 @@ import spacing from '../../theme/spacing';
 
 export default function RegisterDetailsScreen({ navigation }) {
     const { registration } = useRegistration();
-    const [form, setForm] = useState({ city: 'Ponte de Lima', postalCode: '', roles: ['buyer'], confirmAdult: false, acceptTerms: false, marketingConsent: false });
+    const [form, setForm] = useState({ location: { municipalityCode: '', parishCode: '' }, usageIntent: undefined, confirmAdult: false, acceptTerms: false, marketingConsent: false });
     const [isLoading, setIsLoading] = useState(false);
-    const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
     const toggle = (key) => setForm((current) => ({ ...current, [key]: !current[key] }));
 
     const submit = async () => {
         if (!registration.email) return Alert.alert('Dados em falta', 'Volta ao primeiro passo e preenche os teus dados.');
-        if (!form.city.trim() || !/^\d{4}-\d{3}$/.test(form.postalCode)) return Alert.alert('Localização inválida', 'Indica a cidade e o código postal no formato 0000-000.');
-        if (!form.roles.length) return Alert.alert('Seleciona um perfil', 'Escolhe comprador, vendedor ou ambos.');
+        if (!form.location.municipalityCode || !form.location.parishCode) return Alert.alert('Localização em falta', 'Seleciona o concelho e a freguesia.');
         if (!form.confirmAdult) return Alert.alert('Confirmação necessária', 'Tens de confirmar que tens pelo menos 18 anos.');
         if (!form.acceptTerms) return Alert.alert('Termos obrigatórios', 'Tens de aceitar os Termos e a Política de Privacidade.');
         setIsLoading(true);
         try {
-            const { passwordConfirmation: _ignored, ...account } = registration;
-            const result = await authService.register({ ...account, roles: form.roles, location: { city: form.city, postalCode: form.postalCode }, confirmAdult: form.confirmAdult, acceptTerms: form.acceptTerms, marketingConsent: form.marketingConsent });
+            const { firstName, lastName, email, password } = registration;
+            const result = await authService.register({ firstName, lastName, email, password, usageIntent: form.usageIntent, location: form.location, confirmAdult: form.confirmAdult, acceptTerms: form.acceptTerms, marketingConsent: form.marketingConsent });
             if (!result?.verification?.challengeId) throw new Error('O servidor não devolveu o pedido de verificação. Reinicia o backend e tenta novamente.');
             navigation.navigate(ROUTES.OTP_VERIFICATION, result.verification);
         } catch (error) {
@@ -40,17 +38,19 @@ export default function RegisterDetailsScreen({ navigation }) {
             <Text style={styles.step}>Passo 2 de 2</Text>
             <View style={styles.track}><View style={styles.fullTrack} /></View>
         </View>
-        <Text style={sharedStyles.screenTitle}>Como queres usar a DaTerra?</Text>
-        <Text style={sharedStyles.screenSubtitle}>Podes comprar, vender ou fazer ambos.</Text>
-        <Text style={styles.label}>Perfil</Text>
-        <View style={styles.roles}>
-            {['buyer', 'seller'].map((role) => {
-                const selected = form.roles.includes(role);
-                return <Chip key={role} label={role === 'buyer' ? 'Comprador' : 'Vendedor'} selected={selected} onPress={() => setForm((current) => ({ ...current, roles: selected ? current.roles.filter((item) => item !== role) : [...current.roles, role] }))} />;
-            })}
+        <Text style={sharedStyles.screenTitle}>Completa o teu perfil</Text>
+        <Text style={sharedStyles.screenSubtitle}>Conta-nos um pouco sobre como queres usar a Figo.</Text>
+        <Text style={styles.label}>Como pensas usar a Figo? (opcional)</Text>
+        <Text style={styles.hint}>Esta informação ajuda-nos a melhorar a experiência.</Text>
+        <View style={styles.intents}>
+            {[['buy', 'Quero comprar'], ['sell', 'Quero vender'], ['both', 'Ambos']].map(([value, label]) =>
+                <Chip key={value} label={label} selected={form.usageIntent === value} disabled={isLoading}
+                    onPress={() => setForm(current => ({ ...current, usageIntent: current.usageIntent === value ? undefined : value }))} />
+            )}
         </View>
-        <Input label="Cidade" value={form.city} onChangeText={update('city')} />
-        <Input label="Código postal" value={form.postalCode} onChangeText={update('postalCode')} keyboardType="numbers-and-punctuation" placeholder="5370-000" />
+        <Text style={styles.hint}>Podes deixar sem seleção ou tocar novamente para desmarcar.</Text>
+        <Text style={styles.label}>Localização</Text>
+        <AddressSelect {...form.location} onChange={location => setForm(current => ({ ...current, location }))} />
         <CheckRow checked={form.confirmAdult} label="Confirmo que tenho pelo menos 18 anos." onPress={() => toggle('confirmAdult')} />
         <CheckRow checked={form.acceptTerms} label="Aceito os Termos e a Política de Privacidade." onPress={() => toggle('acceptTerms')} />
         <CheckRow checked={form.marketingConsent} label="Quero receber novidades e promoções (opcional)." onPress={() => toggle('marketingConsent')} />
@@ -66,10 +66,11 @@ function CheckRow({ checked, label, onPress }) {
 }
 
 const styles = StyleSheet.create({
-    progress: { gap: spacing.sm }, step: { color: colors.primaryDark, fontWeight: '700' },
+    progress: { gap: spacing.sm }, step: { color: colors.primaryDarkFigo, fontWeight: '700' },
     track: { height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
-    fullTrack: { width: '100%', height: '100%', backgroundColor: colors.primary },
-    label: { color: colors.text, fontWeight: '600' }, roles: { flexDirection: 'row', gap: spacing.sm },
+    fullTrack: { width: '100%', height: '100%', backgroundColor: colors.primaryFigo },
+    label: { color: colors.text, fontWeight: '600' }, intents: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+    hint: { color: colors.textMuted },
     checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
-    checkbox: { color: colors.primaryDark, fontSize: 24 }, checkLabel: { color: colors.text, flex: 1 }
+    checkbox: { color: colors.primaryDarkFigo, fontSize: 24 }, checkLabel: { color: colors.text, flex: 1 }
 });

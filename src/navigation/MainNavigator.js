@@ -1,5 +1,7 @@
+import { useEffect, useState } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, View } from 'react-native';
+import { I18nManager, Keyboard, Platform, StyleSheet, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Badge from '../components/common/Badge';
@@ -18,6 +20,7 @@ import ProductDetailsScreen from '../screens/product/ProductDetailsScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen'; 
 import ProfileScreen from '../screens/profile/ProfileScreen'; 
 import SellerProfileScreen from '../screens/seller/SellerProfileScreen'; 
+import shadows from '../theme/shadows';
 import colors from '../theme/colors'; import { ROUTES } from './routes';
 
 const Stack = createNativeStackNavigator(); 
@@ -43,9 +46,35 @@ function TabIcon({ routeName, focused, color, size }) {
     </View>;
 }
 
-function TabNavigator() { 
-    return <Tabs.Navigator 
-            screenOptions={({ route }) => ({ headerShown: false, tabBarActiveTintColor: colors.primaryDarkFigo, tabBarInactiveTintColor: colors.textMuted, tabBarStyle: { height: 68, paddingTop: 7, paddingBottom: 8, backgroundColor: colors.surface, borderTopColor: colors.border }, tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} /> })}>
+const TAB_BAR_HEIGHT = 72;
+const TAB_BAR_GAP = 8;
+
+function TabNavigator() {
+    const insets = useSafeAreaInsets();
+    const [keyboardVisible, setKeyboardVisible] = useState(false);
+    useEffect(() => {
+        // Authentication can unmount its input before the keyboard hide event reaches this navigator.
+        setKeyboardVisible(false);
+        Keyboard.dismiss();
+        const show = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow', () => setKeyboardVisible(true));
+        const hide = Keyboard.addListener(Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide', () => setKeyboardVisible(false));
+        const didHide = Keyboard.addListener('keyboardDidHide', () => setKeyboardVisible(false));
+        return () => { show.remove(); hide.remove(); didHide.remove(); };
+    }, []);
+    const bottom = Math.max(insets.bottom, 8) + TAB_BAR_GAP;
+    return <Tabs.Navigator
+            safeAreaInsets={{ bottom: 0, left: 0, right: 0 }}
+            screenOptions={({ route }) => ({
+                headerShown: false,
+                tabBarActiveTintColor: colors.primaryDarkFigo,
+                tabBarInactiveTintColor: colors.textMuted,
+                tabBarLabelPosition: 'below-icon',
+                tabBarHideOnKeyboard: true,
+                tabBarStyle: [styles.floatingBar, { bottom: keyboardVisible ? 0 : bottom, start: (I18nManager.isRTL ? insets.right : insets.left) + 16, end: (I18nManager.isRTL ? insets.left : insets.right) + 16 }],
+                // Absolute bars reserve no space by themselves. Keep every tab's viewport clear centrally.
+                sceneStyle: { paddingBottom: keyboardVisible ? 0 : TAB_BAR_HEIGHT + bottom + TAB_BAR_GAP, backgroundColor: colors.background },
+                tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} />
+            })}>
                 <Tabs.Screen name={ROUTES.HOME} component={HomeScreen} options={{ title: 'Início' }} />
                 <Tabs.Screen name={ROUTES.EXPLORE} component={ExploreScreen} options={{ title: 'Explorar' }} />
                 <Tabs.Screen name={ROUTES.SELL} component={CreateProductScreen} options={{ title: 'Vender' }} />
@@ -69,6 +98,21 @@ export default function MainNavigator() {
            </Stack.Navigator>; }
 
 const styles = StyleSheet.create({
+    floatingBar: {
+        position: 'absolute',
+        height: TAB_BAR_HEIGHT,
+        borderRadius: 28,
+        paddingTop: 7,
+        paddingBottom: 8,
+        paddingHorizontal: 2,
+        backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderTopWidth: 1,
+        borderColor: colors.border,
+        borderTopColor: colors.border,
+        ...shadows.card,
+        shadowRadius: 12,
+    },
     tabIcon: {
         position: 'relative',
         alignItems: 'center',

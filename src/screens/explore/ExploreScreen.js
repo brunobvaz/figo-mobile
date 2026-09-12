@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Chip from '../../components/common/Chip';
@@ -9,7 +9,7 @@ import Screen from '../../components/layout/Screen';
 import ProductCard from '../../components/product/ProductCard';
 import ExploreFilterSheet from '../../components/explore/ExploreFilterSheet';
 import ExploreMap from '../../components/explore/ExploreMap';
-import { locationService } from '../../services/locationService';
+import { useActiveLocation } from '../../context/ActiveLocationContext';
 import useProducts from '../../hooks/useProducts';
 import useExploreProducts from '../../hooks/useExploreProducts';
 import { hasExploreFilters, resetExploreFilters, SORT_OPTIONS } from '../../utils/exploreFilters';
@@ -22,14 +22,10 @@ export default function ExploreScreen({ navigation, route }) {
   const filters = route.params?.filters || EMPTY_FILTERS;
   const { products: cachedProducts } = useProducts();
   const [panel, setPanel] = useState(null);
-  const [coordinates, setCoordinates] = useState(null);
-  const [region, setRegion] = useState({});
-  const [locating, setLocating] = useState(false);
-  const [locationError, setLocationError] = useState('');
-  const attemptedLocation = useRef(false);
-  const locationInFlight = useRef(false);
-  const mounted = useRef(true);
-  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
+  const { coordinates: activeCoordinates, region: activeRegion, locating, error: locationError, selectDevice } = useActiveLocation();
+  // A manually selected administrative region is a search filter, not another GPS source.
+  const region = filters.municipalityCode ? { municipalityCode: filters.municipalityCode, parishCode: filters.parishCode || '' } : (filters.radiusKm != null || filters.sortBy === 'distance') ? activeRegion : {};
+  const coordinates = filters.municipalityCode ? null : activeCoordinates;
   // Migrate legacy direct category links once into the existing canonical payload.
   useEffect(() => {
     if (route.params?.category) navigation.setParams({ filters: { ...filters, category: route.params.category }, category: undefined });
@@ -38,31 +34,22 @@ export default function ExploreScreen({ navigation, route }) {
   const clear = () => navigation.setParams({ filters: resetExploreFilters(filters), category: undefined });
   const viewMode = filters.viewMode === 'map' ? 'map' : 'list';
   const proximity = filters.radiusKm != null || filters.sortBy === 'distance';
-  const locate = useCallback(async () => {
-    if (locationInFlight.current) return;
-    attemptedLocation.current = true; locationInFlight.current = true;
-    setLocating(true); setLocationError('');
-    try {
-      const value = await locationService.current();
-      if (mounted.current) setCoordinates(value);
-    } catch (error) { if (mounted.current) setLocationError(error.message); }
-    finally { locationInFlight.current = false; if (mounted.current) setLocating(false); }
-  }, []);
-  useEffect(() => { if (proximity && !coordinates && !attemptedLocation.current) locate(); }, [proximity, coordinates, locate]);
+  const locate = () => { updateFilters({ municipalityCode: undefined, parishCode: undefined }); selectDevice(); };
+  const setRegion = value => updateFilters({ municipalityCode: value.municipalityCode || undefined, parishCode: value.parishCode || undefined });
   const results = useExploreProducts(filters, coordinates, region);
   const { width, fontScale } = useWindowDimensions();
   const columns = width >= 360 && fontScale <= 1.3 ? 2 : 1;
   const cardWidth = (width - spacing.md * 2 - (columns - 1) * spacing.md) / columns;
   const producers = useMemo(() => [...new Map(cachedProducts.filter(item => item.seller?.id).map(item => [item.seller.id, item.seller])).values()], [cachedProducts]);
   const openProduct = product => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: product.id });
-  const editorialFilter = Boolean(filters.featured || filters.seasonal);
+  const editorialFilter = Boolean(filters.featured || filters.seasonal || filters.season);
   const count = editorialFilter ? `${results.products.length} produtos${results.hasMore ? ' carregados' : ''}` : `${results.total ?? 0} produtos`;
   const activeChips = [
     ...(filters.radiusKm != null ? [{ label: `Até ${filters.radiusKm} km`, patch: { radiusKm: undefined } }] : []),
     ...(filters.category && filters.category !== 'Todos' ? [{ label: filters.category, patch: { category: undefined } }] : []),
     ...(filters.minPrice != null || filters.maxPrice != null ? [{ label: filters.minPrice != null && filters.maxPrice != null ? `${filters.minPrice} € – ${filters.maxPrice} €` : filters.maxPrice != null ? `Até ${filters.maxPrice} €` : `Desde ${filters.minPrice} €`, patch: { minPrice: undefined, maxPrice: undefined } }] : []),
     ...(filters.featured ? [{ label: 'Em destaque', patch: { featured: undefined } }] : []),
-    ...(filters.seasonal ? [{ label: 'Da época', patch: { seasonal: undefined } }] : []),
+    ...((filters.season || filters.seasonal) ? [{ label: 'Da época', patch: { seasonal: undefined, season: undefined } }] : []),
     ...(filters.availableOnly ? [{ label: 'Apenas disponíveis', patch: { availableOnly: undefined } }] : []),
     ...(filters.unit ? [{ label: filters.unit.replace('€/', ''), patch: { unit: undefined } }] : []),
     ...(filters.sellerId ? [{ label: producers.find(item => item.id === filters.sellerId)?.name || 'Produtor', patch: { sellerId: undefined } }] : []),
@@ -84,14 +71,14 @@ export default function ExploreScreen({ navigation, route }) {
       </Pressable>)}
     </View>
     <ScrollView horizontal style={styles.horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-      {[['distance', 'Distância', filters.radiusKm != null], ['category', 'Categoria', Boolean(filters.category)], ['price', 'Preço', filters.minPrice != null || filters.maxPrice != null], ['more', 'Mais filtros', Boolean(filters.featured || filters.seasonal || filters.availableOnly || filters.unit || filters.sellerId)]].map(([key, label, selected]) => <Chip key={key} label={label} trailingIcon={key === 'more' ? undefined : 'chevron-down'} selected={selected} style={styles.chip} onPress={() => setPanel(key)} />)}
+      {[['distance', 'Distância', filters.radiusKm != null], ['category', 'Categoria', Boolean(filters.category)], ['price', 'Preço', filters.minPrice != null || filters.maxPrice != null], ['more', 'Mais filtros', Boolean(filters.featured || filters.seasonal || filters.season || filters.availableOnly || filters.unit || filters.sellerId)]].map(([key, label, selected]) => <Chip key={key} label={label} trailingIcon={key === 'more' ? undefined : 'chevron-down'} selected={selected} style={styles.chip} onPress={() => setPanel(key)} />)}
     </ScrollView>
     {activeChips.length ? <ScrollView horizontal style={styles.horizontal} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
       {activeChips.map(({ label, patch }) => <Chip key={Object.keys(patch)[0]} label={`${label} ×`} accessibilityLabel={`Remover filtro: ${label}`} selected style={styles.chip} onPress={() => updateFilters(patch)} />)}
     </ScrollView> : null}
     {proximity && !coordinates ? <Pressable accessibilityRole="button" onPress={() => setPanel('distance')}><Text numberOfLines={2} style={styles.locationNote}>{locating ? 'A obter localização… A pesquisa continua disponível.' : locationError ? 'Sem localização. Toca para escolher uma região ou tentar novamente.' : 'Escolhe uma localização para calcular distâncias.'}</Text></Pressable> : null}
     {region.municipalityCode ? <Pressable accessibilityRole="button" onPress={() => setPanel('distance')}><Text style={styles.locationNote}>Região selecionada · Alterar localização</Text></Pressable> : null}
-    {editorialFilter ? <Text style={styles.help}>{filters.seasonal ? 'A seleção depende da informação sazonal disponível.' : 'Seleção temporária de destaques do Início.'}</Text> : null}
+    {editorialFilter ? <Text style={styles.help}>{(filters.season || filters.seasonal) ? 'A seleção depende da informação sazonal disponível.' : 'Seleção temporária de destaques do Início.'}</Text> : null}
     <View style={styles.resultHeader}>
       <Text accessibilityLiveRegion="polite" style={styles.count}>{results.busy && !results.products.length ? 'A pesquisar…' : count}</Text>
       <Pressable accessibilityRole="button" accessibilityLabel="Ordenar resultados" style={styles.sort} onPress={() => setPanel('sort')}><Text style={styles.link}>{SORT_OPTIONS.find(([value]) => value === (filters.sortBy || 'recent'))?.[1]}</Text><Ionicons name="chevron-down" size={14} color={colors.primaryDarkFigo} accessible={false} /></Pressable>

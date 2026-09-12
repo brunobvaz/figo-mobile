@@ -1,49 +1,57 @@
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Input from '../../components/common/Input';
 import Header from '../../components/layout/Header';
 import Screen from '../../components/layout/Screen';
 import ProductList from '../../components/product/ProductList';
 import ProducerCard from '../../components/product/ProducerCard';
+import HomeLocationSheet from '../../components/home/HomeLocationSheet';
+import { useActiveLocation } from '../../context/ActiveLocationContext';
+import useExploreProducts from '../../hooks/useExploreProducts';
+import { locationLabel } from '../../utils/activeLocation';
+import { currentProductSeason, isExplicitlyInSeason } from '../../utils/productSeasonality';
 import HomeDiscover from '../../components/home/HomeDiscover';
 import useAuth from '../../hooks/useAuth';
 import useProducts from '../../hooks/useProducts';
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
-import { formatLocation } from '../../utils/formatters';
-import { discoveryProducts, nearbyProducts, quickCategories } from '../../utils/homeDiscovery';
+import { discoveryProducts, quickCategories } from '../../utils/homeDiscovery';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
   const { products, isLoading } = useProducts();
   const [query, setQuery] = useState('');
+  const [locationOpen, setLocationOpen] = useState(false);
+  const { activeLocation, coordinates, region, locating, error: locationError } = useActiveLocation();
+  const currentSeason = currentProductSeason();
   const feed = useMemo(() => discoveryProducts(products), [products]);
-  const nearby = useMemo(() => nearbyProducts(feed), [feed]);
+  const nearbyFilters = { radiusKm: 10, sortBy: 'distance', viewMode: 'list' };
+  const nearbyResults = useExploreProducts(nearbyFilters, coordinates, region, Boolean(coordinates || region.municipalityCode));
+  const nearby = nearbyResults.products;
   const producers = useMemo(() => [...new Map(feed.filter(item => item.seller?.id)
     .map(item => [item.seller.id, item.seller])).values()], [feed]);
   // Each shortcut replaces the complete filter payload, avoiding stale tab filters.
   const explore = (filters = {}) => navigation.navigate(ROUTES.EXPLORE, { filters });
   const openProduct = item => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id });
-  const openProducers = () => {
-    // TODO: connect a producer directory when that screen exists.
-    Alert.alert('Produtores', 'Toca num produtor para conhecer o seu perfil e produtos.');
-  };
   const sectionHeader = (title, onPress) => <View style={styles.sectionHeader}>
     <Text accessibilityRole="header" style={styles.title}>{title}</Text>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos: ${title}`} onPress={onPress} style={styles.viewAll}>
+    {onPress ? <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos: ${title}`} onPress={onPress} style={styles.viewAll}>
       <Text style={styles.link}>Ver todos →</Text>
-    </Pressable>
+    </Pressable> : null}
   </View>;
   const productSection = (title, items, filters, variant) => items.length ? <View style={[styles.section, styles[variant]]}>
     {sectionHeader(title, () => explore(filters))}
     <ProductList products={items} horizontal variant={variant} onProductPress={openProduct} />
   </View> : null;
   return <Screen scroll contentContainerStyle={styles.page}>
-    <Header title={`Olá, ${user?.name?.split(' ')[0] || 'Bruno'}`} subtitle="Descobre o que há perto de ti" location={formatLocation(user?.location)} right={
+    <Header title={`Olá, ${user?.name?.split(' ')[0] || 'Bruno'}`} subtitle="Descobre o que há perto de ti" location={locationLabel(activeLocation)} onLocationPress={() => setLocationOpen(true)} right={
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => navigation.navigate(ROUTES.PROFILE)}><Avatar uri={user?.avatar} name={user?.name || ''} size={48} /></Pressable>
     } />
+    <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
+    {locating ? <Text accessibilityLiveRegion="polite" style={styles.help}>A obter localização…</Text> : null}
+    {locationError ? <Text accessibilityRole="alert" style={styles.help}>{locationError}</Text> : null}
     <Input leadingIcon="search-outline" accessibilityLabel="Pesquisar produtos locais" placeholder="Pesquisar produtos locais..." value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={() => explore({ query: query.trim() })} />
     <View style={styles.categories}>
       {quickCategories.map(([name, emoji]) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} style={styles.category} onPress={() => explore(name === 'Mais' ? {} : { category: name })}>
@@ -52,10 +60,11 @@ export default function HomeScreen({ navigation }) {
     </View>
     {isLoading ? <ActivityIndicator color={colors.primaryFigo} /> : null}
     {productSection('Produtos em destaque', feed.filter(item => item.featured === true), { featured: true }, 'featured')}
-    {productSection('Perto de ti', nearby, { radiusKm: 10, sortBy: 'distance', viewMode: 'list' }, 'nearby')}
-    {productSection('Da época', feed.filter(item => item.seasonal === true), { seasonal: true }, 'seasonal')}
+    {productSection('Perto de ti', nearby, nearbyFilters, 'nearby')}
+    {nearbyResults.error ? <Pressable accessibilityRole="button" onPress={nearbyResults.retry}><Text style={styles.help}>Não foi possível carregar os produtos próximos. Toca para tentar novamente.</Text></Pressable> : null}
+    {productSection('Da época', feed.filter(item => isExplicitlyInSeason(item, currentSeason)), { season: currentSeason }, 'seasonal')}
     {producers.length ? <View style={[styles.section, styles.producerSection]}>
-      {sectionHeader('Produtores em destaque', openProducers)}
+      {sectionHeader('Produtores em destaque')}
       <FlatList horizontal data={producers} keyExtractor={item => String(item.id)} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.producers}
         renderItem={({ item }) => <ProducerCard producer={item} onPress={() => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: item.id })} />} />
     </View> : null}

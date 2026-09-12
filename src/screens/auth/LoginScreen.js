@@ -8,6 +8,7 @@ import LinkButton from '../../components/common/LinkButton';
 import useAuth from '../../hooks/useAuth';
 import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
+import sharedStyles from '../../theme/SharedStyles';
 import typography from '../../theme/typography';
 import spacing from '../../theme/spacing';
 import { isValidEmail } from '../../utils/validators';
@@ -36,7 +37,7 @@ export default function LoginScreen({ navigation }) {
 
     return <Screen scroll contentContainerStyle={styles.container}>
         <View style={styles.header}>
-            <Text accessibilityRole="header" style={styles.title}>Bem-vindo!</Text>
+            <Text accessibilityRole="header" style={sharedStyles.screenTitle}>Bem-vindo!</Text>
             <Text style={styles.subtitle}>Entra e descobre o que há perto de ti.</Text>
         </View>
         <View style={styles.form}>
@@ -94,7 +95,6 @@ export default function LoginScreen({ navigation }) {
 const styles = StyleSheet.create({
     container: { flexGrow: 1, paddingTop: spacing.xxl + spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
     header: { gap: spacing.sm },
-    title: { fontSize: typography.sizes.sectionTitle, fontWeight: typography.weights.bold, color: colors.primaryDarkFigo },
     subtitle: { fontSize: typography.sizes.body, lineHeight: typography.lineHeights.body, color: colors.textMuted },
     form: { gap: spacing.md },
     passwordSection: { gap: spacing.md },

@@ -44,7 +44,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
         setIsResending(true);
         try {
             const verification = await authService.resendRegistrationOtp({ challengeId });
-            navigation.setParams({ challengeId: verification.challengeId, email: verification.email });
+            navigation.setParams({ challengeId: verification.challengeId, email: verification.email, devCode: __DEV__ ? verification.devCode : undefined });
             Alert.alert('Código reenviado', `Enviámos um novo código de verificação para ${email}.`);
         }
         catch (error) {
@@ -94,6 +94,6 @@ export default function OtpVerificationScreen({ navigation, route }) {
             onPress={() => navigation.goBack()}
         />
 
-        {devCode ? <Text style={sharedStyles.helperNote}>Código de desenvolvimento: {devCode}</Text> : null}
+        {__DEV__ && devCode ? <Text style={sharedStyles.helperNote}>Código de desenvolvimento: {devCode}</Text> : null}
     </Screen>;
 }

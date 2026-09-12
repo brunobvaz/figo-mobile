@@ -1,5 +1,6 @@
+import OptimizedImage from '../common/OptimizedImage';
 import { useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import useFavorites from '../../hooks/useFavorites';
 import colors from '../../theme/colors';
@@ -28,7 +29,7 @@ export default function ProductCard({ product, onPress, compact = false, style, 
     const locationNote = [product.locationSource === 'parish' ? 'Localização aproximada' : '', ].filter(Boolean).join(' · ');
 
     return <Pressable onPress={onPress} style={[styles.card, homeVariant && (variant === 'featured' ? styles.featuredCard : styles.smallCard), compact && styles.compact, style]}>
-        <View>{product.image && failedImage !== product.image ? <Image
+        <View>{product.image && failedImage !== product.image ? <OptimizedImage
             source={{ uri: product.image }}
             onError={() => setFailedImage(product.image)}
             style={imageStyle}

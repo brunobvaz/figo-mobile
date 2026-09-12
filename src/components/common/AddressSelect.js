@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Button from './Button';
 import Input from './Input';
 import colors from '../../theme/colors';
@@ -96,7 +96,9 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
       <Ionicons name="chevron-forward" size={22} color="#505B70" />
     </Pressable>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
-      <SafeAreaView style={styles.modal}>
+      {/* Native modals need their own provider to measure the presented window's insets. */}
+      <SafeAreaProvider>
+      <SafeAreaView edges={['top', 'bottom', 'left', 'right']} style={styles.modal}>
         <Text accessibilityRole="header" style={styles.heading}>
           {selectedMunicipality ? 'Selecionar freguesia' : 'Selecionar concelho'}
         </Text>
@@ -120,6 +122,7 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
         />}
         <Button title="Cancelar" variant="secondary" onPress={() => setOpen(false)} />
       </SafeAreaView>
+      </SafeAreaProvider>
     </Modal>
   </>;
 }

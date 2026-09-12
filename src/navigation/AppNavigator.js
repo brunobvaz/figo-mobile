@@ -5,6 +5,7 @@ import useAuth from '../hooks/useAuth';
 import colors from '../theme/colors';
 import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
+import { ActiveLocationProvider } from '../context/ActiveLocationContext';
 import { ChatProvider } from '../context/ChatContext';
 import PushNotifications from '../components/PushNotifications';
 import { navigationRef } from './navigationRef';
@@ -30,7 +31,7 @@ export default function AppNavigator() {
       linking={linking}
       fallback={<SplashScreen />}
     >
-      {isAuthenticated ? <ChatProvider key={user.id}><PushNotifications /><MainNavigator /></ChatProvider> : <AuthNavigator />}
+      {isAuthenticated ? <ActiveLocationProvider key={user.id}><ChatProvider><PushNotifications /><MainNavigator /></ChatProvider></ActiveLocationProvider> : <AuthNavigator />}
     </NavigationContainer>
   );
 }

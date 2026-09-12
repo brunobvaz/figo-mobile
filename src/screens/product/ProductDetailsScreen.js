@@ -1,4 +1,5 @@
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import OptimizedImage from '../../components/common/OptimizedImage';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
 import Loading from '../../components/common/Loading';
@@ -34,7 +35,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
     });
 
     return <Screen scroll contentContainerStyle={styles.page}>
-        <Image source={{ uri: product.image }} style={styles.image} />
+        <OptimizedImage imageWidth={1280} source={{ uri: product.image }} style={styles.image} />
         <View style={styles.body}>
             <Text style={styles.category}>{product.category}</Text>
             <Text style={styles.title}>{product.title}</Text>

@@ -1,7 +1,6 @@
-import { useState } from 'react';
 import { useNavigation } from '@react-navigation/native';
 import { ROUTES } from '../../navigation/routes';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
@@ -13,16 +12,13 @@ const cards = [
 
 export default function HomeDiscover() {
   const navigation = useNavigation();
-  const [width, setWidth] = useState(0);
-  const cardWidth = Math.max(200, (width - 12) / 2);
-
-  return <View style={styles.section} onLayout={event => setWidth(event.nativeEvent.layout.width)}>
+  return <View style={styles.section}>
     <View style={styles.header}>
       <Text accessibilityRole="header" style={styles.heading}>Mais do que produtos</Text>
 
     </View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cards}>
-      {cards.map(card => <Pressable accessibilityRole="button" onPress={() => navigation.navigate(card.route)} key={card.title} style={[styles.card, { width: cardWidth, backgroundColor: card.background }]}>
+    <View style={styles.cards}>
+      {cards.map(card => <Pressable accessibilityRole="button" onPress={() => navigation.navigate(card.route)} key={card.title} style={[styles.card, { backgroundColor: card.background }]}>
         <MaterialCommunityIcons name={card.icon} size={34} color={card.accent} />
         <View style={styles.cardBody}>
           <View style={styles.copy}>
@@ -32,7 +28,7 @@ export default function HomeDiscover() {
           <MaterialCommunityIcons name="chevron-right" size={23} color={card.accent} />
         </View>
       </Pressable>)}
-    </ScrollView>
+    </View>
   </View>;
 }
 
@@ -40,12 +36,10 @@ const styles = StyleSheet.create({
   section: { gap: 12, marginTop: spacing.sm, marginBottom: spacing.sm },
   header: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   heading: { fontSize: 21, fontWeight: '700', color: colors.text },
-  viewAll: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  viewAllText: { color: '#25824B', fontSize: 14, fontWeight: '600' },
-  cards: { gap: 12 },
-  card: { borderRadius: 16, padding: 16, gap: 8, minHeight: 136 },
-  cardBody: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  copy: { flex: 1, gap: 3 },
+  cards: { flexDirection: 'row', alignItems: 'stretch', gap: 12 },
+  card: { flex: 1, minWidth: 0, borderRadius: 16, padding: 12, gap: 8, minHeight: 136 },
+  cardBody: { flex: 1, gap: 8, justifyContent: 'space-between', alignItems: 'flex-start' },
+  copy: { alignSelf: 'stretch', gap: 3 },
   cardTitle: { fontSize: 16, fontWeight: '700' },
-  description: { fontSize: 14, lineHeight: 19 },
+  description: { fontSize: 13, lineHeight: 18 },
 });

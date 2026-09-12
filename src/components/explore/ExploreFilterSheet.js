@@ -22,7 +22,7 @@ export default function ExploreFilterSheet({ panel, filters, onClose, onApply, r
   const [parishes, setParishes] = useState([]);
   useEffect(() => {
     if (!panel) return;
-    setDraft(filters); setMinimum(filters.minPrice == null ? '' : String(filters.minPrice));
+    setDraft({ ...filters, seasonal: Boolean(filters.season || filters.seasonal) }); setMinimum(filters.minPrice == null ? '' : String(filters.minPrice));
     setMaximum(filters.maxPrice == null ? '' : String(filters.maxPrice)); setError('');
     // Drafts are only edited inside the open sheet; applied state remains in route params.
   }, [panel]);
@@ -87,7 +87,7 @@ export default function ExploreFilterSheet({ panel, filters, onClose, onApply, r
         </View> : null}
         {panel === 'more' ? <View style={styles.footer}>
           <Button title="Limpar filtros" variant="secondary" onPress={() => setDraft({})} />
-          <Button title="Aplicar" onPress={() => choose({ featured: draft.featured, seasonal: draft.seasonal, availableOnly: draft.availableOnly, unit: draft.unit, sellerId: draft.sellerId })} />
+          <Button title="Aplicar" onPress={() => choose({ featured: draft.featured, seasonal: draft.seasonal, season: draft.seasonal ? draft.season : undefined, availableOnly: draft.availableOnly, unit: draft.unit, sellerId: draft.sellerId })} />
         </View> : null}
       </SafeAreaView>
     </View>

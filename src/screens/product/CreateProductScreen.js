@@ -1,7 +1,8 @@
+import OptimizedImage from '../../components/common/OptimizedImage';
 import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
 import { useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
 import * as ImagePicker from 'expo-image-picker';
@@ -75,7 +76,7 @@ export default function CreateProductScreen({ navigation, route }) {
         <ProductFieldHeading title="Fotografia" subtitle="Escolhe uma fotografia que mostre bem o produto." />
         <Pressable accessibilityRole="button" accessibilityLabel="Escolher imagem do produto" onPress={chooseImage} style={styles.placeholder}>
             {imageAsset?.uri || existingProduct?.image
-                ? <Image source={{ uri: imageAsset?.uri || existingProduct.image }} style={styles.preview} />
+                ? <OptimizedImage source={{ uri: imageAsset?.uri || existingProduct.image }} style={styles.preview} />
                 : <><Text style={styles.placeholderIcon}>📷</Text><Text style={styles.placeholderText}>Carregar imagem</Text></>}
         </Pressable>
         <Button title={imageAsset || existingProduct?.image ? 'Alterar imagem' : 'Escolher imagem'} variant="secondary" onPress={chooseImage} />

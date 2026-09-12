@@ -1,3 +1,4 @@
+import { isExplicitlyInSeason } from './productSeasonality';
 import { parsePrice } from './price';
 
 export const SORT_OPTIONS = [
@@ -45,13 +46,13 @@ export function applyEditorialFilters(items, filters, editorialProducts) {
   return items.map(item => ({ ...item,
     featured: item.featured ?? metadata.get(item.id)?.featured ?? false,
     seasonal: metadata.get(item.id)?.seasonal ?? item.seasonal ?? false,
-  })).filter(item => (!filters.featured || item.featured) && (!filters.seasonal || item.seasonal));
+  })).filter(item => (!filters.featured || item.featured) && (!(filters.season || filters.seasonal) || isExplicitlyInSeason(item, filters.season)));
 }
 
 export function hasExploreFilters(filters) {
   return Boolean(filters.query || (filters.category && filters.category !== 'Todos') || filters.minPrice != null
-    || filters.maxPrice != null || filters.radiusKm != null || filters.featured || filters.seasonal
-    || filters.availableOnly || filters.sellerId || filters.unit || (filters.sortBy && filters.sortBy !== 'recent'));
+    || filters.maxPrice != null || filters.radiusKm != null || filters.featured || filters.seasonal || filters.season
+    || filters.municipalityCode || filters.parishCode || filters.availableOnly || filters.sellerId || filters.unit || (filters.sortBy && filters.sortBy !== 'recent'));
 }
 
 export function parishMarkers(products, parishes) {

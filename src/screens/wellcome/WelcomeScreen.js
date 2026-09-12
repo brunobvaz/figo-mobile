@@ -38,8 +38,8 @@ export default function WelcomeScreen({ navigation }) {
         left: insets.left + 24,
         right: insets.right + 24,
       }]}>
-        <Button title="Entrar na aplicação" onPress={() => navigation.navigate(ROUTES.LOGIN)} style={styles.button} />
-        <Button title="Registar na aplicação" onPress={() => navigation.navigate(ROUTES.REGISTER)} variant="secondary" style={styles.button} />
+        <Button title="Entrar" onPress={() => navigation.navigate(ROUTES.LOGIN)} style={styles.button} />
+        <Button title="Registar" onPress={() => navigation.navigate(ROUTES.REGISTER)} variant="secondary" style={styles.button} />
       </View>
 
     </View>

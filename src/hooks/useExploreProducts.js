@@ -4,7 +4,7 @@ import { productService } from '../services/productService';
 import { discoveryProducts } from '../utils/homeDiscovery';
 import { applyEditorialFilters, productQuery } from '../utils/exploreFilters';
 
-export default function useExploreProducts(filters, coordinates, region) {
+export default function useExploreProducts(filters, coordinates, region, enabled = true) {
   const { products, cacheProducts } = useProducts();
   const requestKey = JSON.stringify(productQuery(filters, coordinates, region));
   const [state, setState] = useState({ key: '', items: [], pagination: null, busy: true, error: '' });
@@ -30,6 +30,7 @@ export default function useExploreProducts(filters, coordinates, region) {
     }
   }, [requestKey, cacheProducts]);
   useEffect(() => {
+    if (!enabled) return;
     const id = ++generation.current;
     inFlight.current = false;
     setState({ key: requestKey, items: [], pagination: null, busy: true, error: '' });
@@ -38,14 +39,14 @@ export default function useExploreProducts(filters, coordinates, region) {
     previousSearch.current = search || '';
     const timer = setTimeout(() => fetchPage(1, id), delay);
     return () => { clearTimeout(timer); generation.current++; };
-  }, [requestKey, fetchPage, retry]);
-  const current = state.key === requestKey;
+  }, [requestKey, fetchPage, retry, enabled]);
+  const current = enabled && state.key === requestKey;
   const editorial = useMemo(() => discoveryProducts(products), [products]);
   const visible = useMemo(() => current ? applyEditorialFilters(state.items, filters, editorial) : [],
-    [current, state.items, filters.featured, filters.seasonal, editorial]);
+    [current, state.items, filters.featured, filters.seasonal, filters.season, editorial]);
   const hasMore = current && state.pagination?.page < state.pagination?.pages;
   return {
-    products: visible, busy: !current || state.busy, error: current ? state.error : '',
+    products: visible, busy: enabled && (!current || state.busy), error: current ? state.error : '',
     total: current ? state.pagination?.total : undefined,
     hasMore,
     loadMore: () => { if (current && !state.busy && hasMore) fetchPage(state.pagination.page + 1, generation.current); },

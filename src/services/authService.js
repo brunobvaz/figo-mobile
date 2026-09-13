@@ -44,5 +44,4 @@ export const authService = {
     form.append('avatar', asset.file || new ExpoFile(asset.uri));
     return normalizeUser(await api.upload('/users/me/avatar', form));
   },
-  enableSeller: async () => normalizeUser(await api.post('/users/me/enable-seller', {})),
 };

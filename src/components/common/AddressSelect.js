@@ -1,6 +1,7 @@
+import LoadingIndicator from './LoadingIndicator';
 import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import Button from './Button';
 import Input from './Input';
@@ -107,7 +108,7 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
           <Button title="Alterar concelho" variant="soft" onPress={() => { setSelectedMunicipality(null); setQuery(''); }} />
         </> : null}
         <Input placeholder={selectedMunicipality ? 'Pesquisar freguesia' : 'Pesquisar concelho'} value={query} onChangeText={setQuery} />
-        {busy ? <ActivityIndicator color={colors.primaryDarkFigo} /> : error ? <>
+        {busy ? <LoadingIndicator color={colors.primaryDarkFigo} /> : error ? <>
           <Text accessibilityRole="alert" style={{ color: colors.error }}>{error}</Text>
           <Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} />
         </> : <FlatList

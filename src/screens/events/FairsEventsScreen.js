@@ -1,5 +1,6 @@
+import LoadingIndicator from '../../components/common/LoadingIndicator';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/layout/Screen';
 import Chip from '../../components/common/Chip';
@@ -44,7 +45,7 @@ export default function FairsEventsScreen() {
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
       {EVENT_FILTERS.map(label => <Chip key={label} label={label} selected={filter === label} onPress={() => setFilter(label)} style={styles.chip} />)}
     </ScrollView>
-    {loading ? <ActivityIndicator accessibilityLabel="A carregar" color={colors.primaryFigo} /> : error ? <View style={styles.feedback}>
+    {loading ? <LoadingIndicator accessibilityLabel="A carregar" color={colors.primaryFigo} /> : error ? <View style={styles.feedback}>
       <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
       <Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} />
     </View> : visible.length ? visible.map(item => <EventCard key={item.id} event={item} onPress={() => openItem(item)} />)

@@ -1,3 +1,4 @@
+import LoadingScreen from '../../components/common/LoadingScreen';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
@@ -160,7 +161,7 @@ export default function ChatScreen({ route, navigation }) {
 
   // Android already resizes the window (softwareKeyboardLayoutMode: resize).
   // On iOS resize the whole conversation, including the composer, below the native header.
-  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
+  return <LoadingScreen loading={focused && (loading || contextProduct.loading)} message="A carregar conversa…"><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
     <Screen contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
       <ProductContextCard product={contextProduct.product} title={contextProduct.title} loading={contextProduct.loading}
         onPress={() => navigation.push(ROUTES.PRODUCT_DETAILS, { productId: contextProduct.productId })} />
@@ -185,7 +186,7 @@ export default function ChatScreen({ route, navigation }) {
         <Button title="Enviar" loading={sending} disabled={!id || !message.trim() || sending} onPress={() => send()} style={styles.sendButton} />
       </View>
     </Screen>
-  </KeyboardAvoidingView>;
+  </KeyboardAvoidingView></LoadingScreen>;
 }
 const styles = StyleSheet.create({
   page: { flex: 1, minHeight: 0, paddingTop: spacing.md, gap: spacing.md },

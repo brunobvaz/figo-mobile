@@ -6,6 +6,7 @@ import { setUnauthorizedHandler } from '../services/api';
 export const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(true);
   const [isLoading, setIsLoading] = useState(true);
   useEffect(() => {
     let active = true;
@@ -13,7 +14,7 @@ export function AuthProvider({ children }) {
     authService.restoreSession()
       .then((currentUser) => { if (active) setUser(currentUser); })
       .catch(() => { if (active) setUser(null); })
-      .finally(() => { if (active) setIsLoading(false); });
+      .finally(() => { if (active) { setIsLoading(false); setIsRestoring(false); } });
     return () => { active = false; setUnauthorizedHandler(null); };
   }, []);
   const login = useCallback(async (credentials) => { setIsLoading(true); try { const session = await authService.login(credentials); setUser(session.user); } finally { setIsLoading(false); } }, []);
@@ -22,7 +23,6 @@ export function AuthProvider({ children }) {
   const logoutAll = useCallback(async () => { try { await authService.logoutAll(); setUser(null); } catch (error) { setPushUser(user?.id); throw error; } }, [user?.id]);
   const updateProfile = useCallback(async (changes) => { const nextUser = await authService.updateProfile(changes); setUser(nextUser); return nextUser; }, []);
   const updateAvatar = useCallback(async (asset) => { const nextUser = await authService.updateAvatar(asset); setUser(nextUser); return nextUser; }, []);
-  const enableSeller = useCallback(async () => { const nextUser = await authService.enableSeller(); setUser(nextUser); return nextUser; }, []);
-  const value = useMemo(() => ({ user, isLoading, isAuthenticated: Boolean(user), login, verifyRegistrationOtp, logout, logoutAll, updateProfile, updateAvatar, enableSeller }), [user, isLoading, login, verifyRegistrationOtp, logout, logoutAll, updateProfile, updateAvatar, enableSeller]);
+  const value = useMemo(() => ({ user, isLoading, isRestoring, isAuthenticated: Boolean(user), login, verifyRegistrationOtp, logout, logoutAll, updateProfile, updateAvatar }), [user, isLoading, isRestoring, login, verifyRegistrationOtp, logout, logoutAll, updateProfile, updateAvatar]);
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

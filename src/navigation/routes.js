@@ -1,4 +1,6 @@
 export const ROUTES = {
+    LEGAL_DOCUMENT: 'LegalDocument',
+    LEGAL_INFO: 'LegalInfo',
     WELCOME: 'Welcome', 
     LOGIN: 'Login', 
     REGISTER: 'Register',

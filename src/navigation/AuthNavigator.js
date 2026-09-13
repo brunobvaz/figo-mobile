@@ -1,3 +1,4 @@
+import LegalDocumentScreen from '../screens/legal/LegalDocumentScreen';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
@@ -14,6 +15,7 @@ const Stack = createNativeStackNavigator();
 
 export default function AuthNavigator() {
     return <RegistrationProvider><Stack.Navigator initialRouteName={ROUTES.WELCOME} screenOptions={{ headerShown: false }}>
+        <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
         <Stack.Screen name={ROUTES.WELCOME} component={WelcomeScreen} />
         <Stack.Screen name={ROUTES.LOGIN} component={LoginScreen} />
         <Stack.Screen name={ROUTES.REGISTER} component={RegisterScreen} />

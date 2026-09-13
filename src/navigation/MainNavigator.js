@@ -1,3 +1,5 @@
+import LegalInfoScreen from '../screens/legal/LegalInfoScreen';
+import LegalDocumentScreen from '../screens/legal/LegalDocumentScreen';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -46,7 +48,7 @@ function TabIcon({ routeName, focused, color, size }) {
     </View>;
 }
 
-const TAB_BAR_HEIGHT = 72;
+const TAB_BAR_HEIGHT = 64;
 const TAB_BAR_GAP = 8;
 
 function TabNavigator() {
@@ -71,8 +73,7 @@ function TabNavigator() {
                 tabBarLabelPosition: 'below-icon',
                 tabBarHideOnKeyboard: true,
                 tabBarStyle: [styles.floatingBar, { bottom: keyboardVisible ? 0 : bottom, start: (I18nManager.isRTL ? insets.right : insets.left) + 16, end: (I18nManager.isRTL ? insets.left : insets.right) + 16 }],
-                // Absolute bars reserve no space by themselves. Keep every tab's viewport clear centrally.
-                sceneStyle: { paddingBottom: keyboardVisible ? 0 : TAB_BAR_HEIGHT + bottom + TAB_BAR_GAP, backgroundColor: colors.background },
+                sceneStyle: { backgroundColor: colors.background },
                 tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} />
             })}>
                 <Tabs.Screen name={ROUTES.HOME} component={HomeScreen} options={{ title: 'Início' }} />
@@ -84,7 +85,9 @@ function TabNavigator() {
 
 export default function MainNavigator() { 
     return <Stack.Navigator screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
-                <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
+                <Stack.Screen name={ROUTES.LEGAL_INFO} component={LegalInfoScreen} options={{ title: 'Informação legal' }} />
+        <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
+        <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
                 <Stack.Screen name={ROUTES.SEASONAL_RECIPES} component={SeasonalRecipesScreen} options={{ title: 'Receitas da época' }} />
                 <Stack.Screen name={ROUTES.FAIRS_EVENTS} component={FairsEventsScreen} options={{ title: 'Feiras e eventos' }} />
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
@@ -102,8 +105,8 @@ const styles = StyleSheet.create({
         position: 'absolute',
         height: TAB_BAR_HEIGHT,
         borderRadius: 28,
-        paddingTop: 7,
-        paddingBottom: 8,
+        paddingTop: 5,
+        paddingBottom: 5,
         paddingHorizontal: 2,
         backgroundColor: colors.surface,
         borderWidth: 1,

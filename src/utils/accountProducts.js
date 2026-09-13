@@ -5,7 +5,7 @@ export async function loadOwnProducts(service, userId, isActive = () => true) {
   const items = new Map();
   let page = 1;
   while (isActive()) {
-    const response = await service.page({ sellerId: userId, page, limit: 100 });
+    const response = await service.mine({ page, limit: 100 });
     if (!isActive()) return [];
     response.items.filter(item => belongsToSeller(item, userId)).forEach(item => items.set(item.id, item));
     if (page >= response.pagination.pages) break;
@@ -23,7 +23,7 @@ export async function loadFavoriteProducts(service, ids, isActive = () => true) 
       catch (error) { if (error.status === 404) return null; throw error; }
     }));
     if (!isActive()) return [];
-    items.push(...batch.filter(item => item && uniqueIds.includes(item.id)));
+    items.push(...batch.filter(item => item && item.is_active !== false && uniqueIds.includes(item.id)));
   }
   return items;
 }

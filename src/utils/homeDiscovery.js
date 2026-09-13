@@ -2,7 +2,7 @@ import { isExplicitlyInSeason } from './productSeasonality';
 
 // Featured selection remains temporary; seasonality follows the saved product availability.
 export function discoveryProducts(products) {
-  return products.map((product, index) => ({
+  return products.filter(product => product.is_active !== false && product.status !== 'deleted').map((product, index) => ({
     ...product,
     featured: product.featured ?? index < 6,
     seasonal: isExplicitlyInSeason(product),

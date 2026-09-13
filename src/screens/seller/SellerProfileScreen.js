@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Avatar from '../../components/common/Avatar';
+import ProfileAvatar from '../../components/common/ProfileAvatar';
 import EmptyState from '../../components/common/EmptyState';
 import Screen from '../../components/layout/Screen';
 import ProductList from '../../components/product/ProductList';
@@ -15,12 +15,12 @@ export default function SellerProfileScreen({ route, navigation }) {
     const insets = useSafeAreaInsets();
     const { products } = useProducts();
     const seller = products.find((item) => item.seller?.id === route.params.sellerId)?.seller; if (!seller) return <EmptyState title="Vendedor não encontrado" />;
-    const sellerProducts = products.filter((item) => item.seller?.id === seller.id);
+    const sellerProducts = products.filter((item) => item.is_active !== false && item.seller?.id === seller.id);
     const memberSince = formatDate(seller.createdAt);
 
     const header = <View style={styles.header}>
         <View style={styles.profile}>
-            <Avatar uri={seller.avatar} name={seller.name} size={82} />
+            <ProfileAvatar uri={seller.avatar} name={seller.name} size={82} />
             <Text style={styles.name}>{seller.name}</Text>
             <Text style={styles.location}>📍 {locationLabel(profileLocation(seller.location))}</Text>
             <Text style={styles.bio}>{seller.bio}</Text>

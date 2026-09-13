@@ -2,7 +2,7 @@ import OptimizedImage from '../../components/common/OptimizedImage';
 import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
 import { useState } from 'react';
-import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
 import * as ImagePicker from 'expo-image-picker';
@@ -11,7 +11,6 @@ import Chip from '../../components/common/Chip';
 import Input from '../../components/common/Input';
 import Screen from '../../components/layout/Screen';
 import mockCategories from '../../data/mockCategories';
-import useAuth from '../../hooks/useAuth';
 import useProducts from '../../hooks/useProducts';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
@@ -19,25 +18,24 @@ import ProductPriceInput from '../../components/product/ProductPriceInput';
 import { parsePrice, formatPriceInput } from '../../utils/price';
 import { validateProduct } from '../../utils/validators';
 
-const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', seasonality: 'all_year', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
+const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', self_harvest: false, seasonality: 'all_year', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
 
 export default function CreateProductScreen({ navigation, route }) {
-    const { user, enableSeller } = useAuth();
     const { createProduct, updateProduct, getProductById } = useProducts();
     const productId = route?.params?.productId;
     const existingProduct = productId ? getProductById(productId) : null;
     const [form, setForm] = useState(existingProduct ? {
         title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
+        self_harvest: ['Frutas', 'Legumes'].includes(existingProduct.category) && existingProduct.self_harvest === true,
         seasonality: existingProduct.seasonality ?? 'all_year',
         locationSource: existingProduct.locationSource, category: existingProduct.category, municipalityCode: existingProduct.address?.municipalityCode || '', parishCode: existingProduct.address?.parishCode || '', locality: existingProduct.address?.locality || '', latitude: '', longitude: '', locationChanged: !existingProduct.address?.version, image: existingProduct.image || ''
     } : { ...emptyProduct });
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
     const [imageAsset, setImageAsset] = useState(null);
-    const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
+    const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value, ...(key === 'category' && !['Frutas', 'Legumes'].includes(value) ? { self_harvest: false } : {}) }));
     const submit = async () => {
         const nextErrors = validateProduct(form); if (Object.keys(nextErrors).length) return setErrors(nextErrors);
-        if (!user.roles?.includes('seller')) return Alert.alert('Perfil de vendedor necessário', 'Ativa primeiro o perfil de vendedor para publicar produtos.');
         if (!imageAsset && !existingProduct?.image) return Alert.alert('Imagem necessária', 'Seleciona uma imagem do produto.');
         const payload = { ...form, price: parsePrice(form.price) };
         setSaving(true);
@@ -63,12 +61,6 @@ export default function CreateProductScreen({ navigation, route }) {
         if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) return Alert.alert('Imagem demasiado grande', 'Escolhe uma imagem com menos de 5 MB.');
         setImageAsset(asset);
     };
-
-    if (!user.roles?.includes('seller')) return <Screen contentContainerStyle={styles.sellerActivation}>
-        <Text style={styles.title}>Começa a vender na DaTerra</Text>
-        <Text style={styles.activationText}>Ativa o perfil de vendedor para publicares e gerires os teus produtos.</Text>
-        <Button title="Ativar perfil de vendedor" onPress={async () => { try { await enableSeller(); } catch (error) { Alert.alert('Não foi possível ativar', error.message); } }} />
-    </Screen>;
 
     return <Screen scroll contentContainerStyle={styles.page}>
         <Text style={styles.title}>{existingProduct ? 'Editar produto' : 'O que tens para partilhar?'}</Text>
@@ -116,6 +108,13 @@ export default function CreateProductScreen({ navigation, route }) {
             onChange={update('category')}
         />
         </View>
+        {['Frutas', 'Legumes'].includes(form.category) ? <View style={styles.card}>
+          <View style={styles.harvestRow}>
+            <View style={{ flex: 1 }}><ProductFieldHeading title="O comprador pode colher no local?" /></View>
+            <Switch accessibilityLabel="O comprador pode colher no local?" value={form.self_harvest} onValueChange={update('self_harvest')} disabled={saving} trackColor={{ true: colors.primaryDarkFigo, false: colors.border }} />
+          </View>
+          <Text style={styles.activationText}>Permite ao comprador colher diretamente da árvore ou da horta, mediante combinação contigo.</Text>
+        </View> : null}
         <View style={styles.card}>
           <ProductFieldHeading title="Sazonalidade" subtitle="Indica em que época do ano o produto está disponível." />
           <View style={styles.options}>
@@ -171,8 +170,8 @@ function Choice({ label, items, value, onChange }) {
 }
 
 const styles = StyleSheet.create({
+    harvestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     page: { paddingTop: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
-    sellerActivation: { justifyContent: 'center', gap: spacing.md },
     activationText: { color: colors.textMuted, lineHeight: 22 },
     title: { color: colors.primaryDarkFigo, fontSize: 26, fontWeight: '800' },
     placeholder: { height: 150, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primaryFigo, borderRadius: 18, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },

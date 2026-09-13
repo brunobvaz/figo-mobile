@@ -1,6 +1,6 @@
 import OptimizedImage from '../common/OptimizedImage';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProductPrice from '../product/ProductPrice';
 import { canOpenConversationProduct } from '../../utils/conversationProduct';
@@ -23,7 +23,7 @@ export default function ProductContextCard({ product, title, loading, onPress })
     accessibilityState={{ disabled: !clickable, busy: loading }} disabled={!clickable} onPress={onPress}
     style={({ pressed }) => [styles.card, pressed && styles.pressed]}>
     {product?.image && failedImage !== product.image ? <OptimizedImage imageWidth={160} source={{ uri: product.image }} style={styles.image} onError={() => setFailedImage(product.image)} accessible={false} />
-      : <View style={[styles.image, styles.placeholder]}>{loading ? <ActivityIndicator color={colors.primaryFigo} /> : <Ionicons name="leaf-outline" size={25} color={colors.primaryFigo} />}</View>}
+      : <View style={[styles.image, styles.placeholder]}><Ionicons name="leaf-outline" size={25} color={colors.primaryFigo} /></View>}
     <View style={styles.copy}>
       <Text numberOfLines={1} ellipsizeMode="tail" style={styles.title}>{loading ? 'A carregar produto…' : name}</Text>
       {!loading && available ? <ProductPrice price={product.price} unit={product.unit} small /> : null}

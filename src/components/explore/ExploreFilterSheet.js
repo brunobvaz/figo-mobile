@@ -95,7 +95,7 @@ export default function ExploreFilterSheet({ panel, filters, onClose, onApply, r
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
-  backdrop: { ...StyleSheet.absoluteFillObject },
+  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   sheet: { maxHeight: '90%', backgroundColor: colors.background, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingHorizontal: spacing.md },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8 },
   title: { color: colors.text, fontWeight: '700', fontSize: 21 }, close: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 8 },

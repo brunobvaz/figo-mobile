@@ -1,3 +1,4 @@
+import useTabBarClearance from '../../hooks/useTabBarClearance';
 import { useContext } from 'react';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { BottomTabBarHeightContext } from '@react-navigation/bottom-tabs';
@@ -5,15 +6,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 
-export default function Screen({ children, scroll = false, contentContainerStyle, style }) {
+export default function Screen({ children, scroll = false, contentContainerStyle, style, safeAreaEdges }) {
+    const clearance = useTabBarClearance();
     const tabBarHeight = useContext(BottomTabBarHeightContext);
-    // Tab screens already reserve the bottom bar; standalone forms need the safe area.
+    // Tab content extends behind the floating bar; standalone forms use the safe area.
     const edges = scroll && tabBarHeight == null ? ['top', 'bottom'] : ['top'];
 
-    return <SafeAreaView edges={edges} style={[styles.safe, style]}>
+    return <SafeAreaView edges={safeAreaEdges || edges} style={[styles.safe, style]}>
         {scroll ? <ScrollView
             style={styles.scroll}
-            contentContainerStyle={[styles.content, contentContainerStyle]}
+            contentContainerStyle={[styles.content, contentContainerStyle, clearance > 0 && { paddingBottom: Math.max(StyleSheet.flatten(contentContainerStyle)?.paddingBottom ?? spacing.lg, clearance) }]}
             showsVerticalScrollIndicator={false}
             automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
             keyboardShouldPersistTaps="handled"

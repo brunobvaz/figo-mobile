@@ -1,5 +1,6 @@
+import LoadingIndicator from '../../components/common/LoadingIndicator';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Input from '../../components/common/Input';
 import Header from '../../components/layout/Header';
@@ -58,7 +59,7 @@ export default function HomeScreen({ navigation }) {
         <Text style={styles.emoji}>{emoji}</Text><Text numberOfLines={1} style={styles.categoryLabel}>{name}</Text>
       </Pressable>)}
     </View>
-    {isLoading ? <ActivityIndicator color={colors.primaryFigo} /> : null}
+    {isLoading ? <LoadingIndicator color={colors.primaryFigo} /> : null}
     {productSection('Produtos em destaque', feed.filter(item => item.featured === true), { featured: true }, 'featured')}
     {productSection('Perto de ti', nearby, nearbyFilters, 'nearby')}
     {nearbyResults.error ? <Pressable accessibilityRole="button" onPress={nearbyResults.retry}><Text style={styles.help}>Não foi possível carregar os produtos próximos. Toca para tentar novamente.</Text></Pressable> : null}

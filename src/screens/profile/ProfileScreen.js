@@ -3,7 +3,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { productService } from '../../services/productService';
 import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native'; 
 import { Ionicons } from '@expo/vector-icons';
-import Avatar from '../../components/common/Avatar'; 
+import ProfileAvatar from '../../components/common/ProfileAvatar';
 import Button from '../../components/common/Button'; 
 import Screen from '../../components/layout/Screen'; 
 import useAuth from '../../hooks/useAuth'; 
@@ -37,7 +37,7 @@ export default function ProfileScreen({ navigation }) {
         } catch { Alert.alert('Não foi possível ativar', 'Confirma a ligação e a configuração de notificações desta build e tenta novamente.'); }
     };
     return <Screen scroll contentContainerStyle={styles.page}>
-        <View style={styles.profile}><Avatar uri={user.avatar} name={user.name} size={88} />
+        <View style={styles.profile}><ProfileAvatar uri={user.avatar} name={user.name} size={88} />
         <Text style={styles.name}>{user.name}</Text><Text style={styles.email}>{user.email}</Text>
         <Text style={styles.location}>📍 {locationLabel(profileLocation(user.location))}</Text>
         </View>
@@ -66,6 +66,7 @@ export default function ProfileScreen({ navigation }) {
             label="As minhas encomendas" 
             onPress={() => navigation.navigate('Orders')} 
             />
+            <MenuItem icon="document-text-outline" label="Informação legal" onPress={() => navigation.navigate(ROUTES.LEGAL_INFO)} />
             <MenuItem icon="notifications-outline" label="Ativar notificações" onPress={enableNotifications} />
             <Button 
             title="Terminar sessão" 

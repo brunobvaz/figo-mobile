@@ -1,6 +1,7 @@
+import LoadingIndicator from '../../components/common/LoadingIndicator';
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { ActivityIndicator, Text } from 'react-native';
+import { Text } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import spacing from '../../theme/spacing';
 import Screen from '../../components/layout/Screen';
@@ -24,7 +25,7 @@ export default function AccountProductsScreen({ navigation, favorites = false })
   const [retry, setRetry] = useState(0);
   useFocusEffect(useCallback(() => {
     let active = true;
-    setItems([]); setError(''); setBusy(true);
+    setError(''); setBusy(true);
     if (!user?.id || (favorites && favoritesLoading)) return () => { active = false; };
     const request = favorites
       ? loadFavoriteProducts(productService, favoriteIds, () => active)
@@ -36,9 +37,10 @@ export default function AccountProductsScreen({ navigation, favorites = false })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
   }, [user?.id, favorites, favoritesLoading, favoriteIds, retry, cacheProducts]));
-  const visible = items.map(item => getProductById(item.id)).filter(item => item && (favorites ? favoriteIds.includes(item.id) : belongsToSeller(item, user?.id)));
+  const visible = items.map(item => getProductById(item.id)).filter(item => item && (favorites ? item.is_active !== false && favoriteIds.includes(item.id) : belongsToSeller(item, user?.id)));
   return <Screen contentContainerStyle={{ flex: 1, minHeight: 0, paddingTop: 16, paddingBottom: 0, gap: 12 }}>
-    {busy ? <ActivityIndicator /> : error ? <>
+    {busy ? <LoadingIndicator size="small" /> : null}
+    {busy && !visible.length ? null : error ? <>
       <Text>{error}</Text><Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} />
     </> : visible.length ? <ProductList style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ paddingBottom: insets.bottom + spacing.lg }} products={visible} onProductPress={item => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id })} />
       : <Text>{favorites ? 'Ainda não marcaste produtos como favoritos.' : 'Ainda não publicaste anúncios.'}</Text>}

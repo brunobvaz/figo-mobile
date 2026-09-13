@@ -31,7 +31,7 @@ export default function HomeLocationSheet({ visible, onClose }) {
 }
 const styles = StyleSheet.create({
   overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: colors.overlay },
-  backdrop: { ...StyleSheet.absoluteFillObject },
+  backdrop: { position: 'absolute', top: 0, right: 0, bottom: 0, left: 0 },
   sheet: { backgroundColor: colors.background, padding: spacing.lg, gap: spacing.md, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   title: { fontSize: 22, fontWeight: '700', color: colors.text },
   option: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, minHeight: 72, paddingVertical: spacing.sm },

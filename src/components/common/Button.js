@@ -1,5 +1,7 @@
+import LoadingIndicator from './LoadingIndicator';
+import useDelayedLoading from '../../hooks/useDelayedLoading';
 import { Ionicons } from '@expo/vector-icons';
-import { ActivityIndicator, Pressable, StyleSheet, Text } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import typography from '../../theme/typography';
@@ -13,6 +15,7 @@ export default function Button({
   disabled = false,
   style }) {
 
+  const showLoading = useDelayedLoading(loading);
   const secondary = variant === 'secondary';
   const soft = variant === 'soft';
   const foreground = secondary || soft ? colors.primaryDarkFigo : colors.surface;
@@ -26,13 +29,12 @@ export default function Button({
     style={({ pressed }) => [styles.button, secondary && styles.secondary, soft && styles.soft, icon && styles.withIcon, pressed && styles.pressed, (disabled || loading) && styles.disabled, style]}
   >
     {
-      loading ? <ActivityIndicator color={foreground} />
-        :
-        <>
-          {icon ? <Ionicons name={icon} size={28} color={foreground} /> : null}
-          <Text style={[styles.text, { color: foreground }]}>
+      <>
+          {icon ? <Ionicons style={{ opacity: showLoading ? 0 : 1 }} name={icon} size={28} color={foreground} /> : null}
+          <Text style={[styles.text, { color: foreground, opacity: showLoading ? 0 : 1 }]}>
             {title}
           </Text>
+          {showLoading ? <View pointerEvents="none" style={StyleSheet.absoluteFill}><LoadingIndicator style={{ flex: 1 }} size="small" color={foreground} delay={0} /></View> : null}
         </>}
   </Pressable>;
 }

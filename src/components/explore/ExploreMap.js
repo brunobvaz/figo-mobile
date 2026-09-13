@@ -1,5 +1,6 @@
+import LoadingIndicator from '../common/LoadingIndicator';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Constants from 'expo-constants';
 import MapView, { Marker } from 'react-native-maps';
 import ProductCard from '../product/ProductCard';
@@ -62,7 +63,7 @@ export default function ExploreMap({ products, onProductPress }) {
         </Marker>)}
       </MapView>
       <View style={styles.note}>
-        {loading ? <ActivityIndicator size="small" color={colors.primaryDarkFigo} /> : null}
+        {loading ? <LoadingIndicator size="small" color={colors.primaryDarkFigo} /> : null}
         <Text style={styles.help}>{loading ? 'A localizar produtos…' : markers.length ? 'Localizações aproximadas por freguesia' : 'Sem localizações disponíveis para estes produtos.'}</Text>
         {!loading && missing > 0 ? <Text style={styles.help}>{missing} sem pin · disponíveis na Lista</Text> : null}
         {failed ? <Pressable accessibilityRole="button" style={styles.retry} onPress={() => setRetry(value => value + 1)}><Text style={styles.link}>Tentar carregar localizações novamente</Text></Pressable> : null}

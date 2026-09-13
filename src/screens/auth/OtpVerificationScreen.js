@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Text, View } from 'react-native';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
@@ -18,6 +18,15 @@ export default function OtpVerificationScreen({ navigation, route }) {
     const [code, setCode] = useState('');
     const [isResending, setIsResending] = useState(false);
 
+    const resendLock = useRef(false);
+    const [resendAt, setResendAt] = useState(() => Date.now() + (route.params?.resendAfterSeconds ?? 60) * 1000);
+    const [secondsLeft, setSecondsLeft] = useState(0);
+    useEffect(() => {
+        const tick = () => setSecondsLeft(Math.max(0, Math.ceil((resendAt - Date.now()) / 1000)));
+        tick(); const timer = setInterval(tick, 1000);
+        return () => clearInterval(timer);
+    }, [resendAt]);
+    const developmentCode = __DEV__ && devCode;
     const updateCode = (value) => setCode(value.replace(/\D/g, '').slice(0, OTP_LENGTH));
 
     const submit = async () => {
@@ -41,16 +50,21 @@ export default function OtpVerificationScreen({ navigation, route }) {
         if (!challengeId) {
             return Alert.alert('Verificação indisponível', 'Volta ao registo para pedir um novo código.');
         }
+        if (resendLock.current || Date.now() < resendAt) return;
+        resendLock.current = true;
         setIsResending(true);
         try {
             const verification = await authService.resendRegistrationOtp({ challengeId });
             navigation.setParams({ challengeId: verification.challengeId, email: verification.email, devCode: __DEV__ ? verification.devCode : undefined });
-            Alert.alert('Código reenviado', `Enviámos um novo código de verificação para ${email}.`);
+            setCode('');
+            setResendAt(Date.now() + (verification.resendAfterSeconds ?? 60) * 1000);
+            Alert.alert(__DEV__ && verification.devCode ? 'Código de teste gerado' : 'Código reenviado', __DEV__ && verification.devCode ? 'O novo código está visível neste ecrã. Não foi enviado email.' : `Enviámos um novo código de verificação para ${email}.`);
         }
         catch (error) {
             Alert.alert('Não foi possível reenviar', error.message);
         }
         finally {
+            resendLock.current = false;
             setIsResending(false);
         }
     };
@@ -59,7 +73,7 @@ export default function OtpVerificationScreen({ navigation, route }) {
         <Text style={sharedStyles.screenTitle}>Verifica o teu email</Text>
         <Text style={sharedStyles.screenSubtitle}>
             {challengeId
-                ? `Introduz o código de ${OTP_LENGTH} dígitos que enviámos para ${email}.`
+                ? (developmentCode ? 'Usa o código de desenvolvimento apresentado abaixo. Não foi enviado email.' : `Introduz o código de ${OTP_LENGTH} dígitos que enviámos para ${email}.`)
                 : 'Não foi recebido um pedido de verificação válido. Volta ao registo e tenta novamente.'}
         </Text>
 
@@ -84,8 +98,8 @@ export default function OtpVerificationScreen({ navigation, route }) {
         </View>
 
         <LinkButton
-            title={isResending ? 'A reenviar código…' : 'Reenviar código'}
-            disabled={isLoading || isResending || !challengeId}
+            title={isResending ? 'A reenviar código…' : secondsLeft > 0 ? `Reenviar em ${secondsLeft}s` : 'Reenviar código'}
+            disabled={isLoading || isResending || secondsLeft > 0 || !challengeId}
             onPress={resend}
         />
         <LinkButton

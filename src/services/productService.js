@@ -6,6 +6,9 @@ import { api } from './api';
 const serverBaseUrl = config.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
 const normalizeProduct = (product) => ({
   ...product,
+  self_harvest: ['Frutas', 'Legumes'].includes(product.category) && product.self_harvest === true,
+  is_active: product.is_active ?? true,
+  status: product.status ?? 'active',
   seasonality: product.seasonality ?? 'all_year',
   seasonal: isProductInSeason(product),
   distance: Number.isFinite(product.distanceMeters) ? `${product.locationSource === 'parish' ? '≈ ' : ''}${(product.distanceMeters / 1000).toFixed(1).replace('.', ',')} km` : undefined,
@@ -14,7 +17,7 @@ const normalizeProduct = (product) => ({
 });
 const productForm = (product, imageAsset) => {
   const form = new FormData();
-  const fields = ['title', 'description', 'price', 'unit', 'category', 'seasonality'];
+  const fields = ['title', 'description', 'price', 'unit', 'category', 'seasonality', 'status', 'is_active', 'self_harvest'];
   if (product.locationChanged !== false) fields.push('municipalityCode', 'parishCode', 'locality', 'latitude', 'longitude', 'locationSource');
   else if (product.localityChanged) fields.push('locality');
   fields.forEach(key => { if (product[key] != null) form.append(key, String(product[key])); });
@@ -24,9 +27,14 @@ const productForm = (product, imageAsset) => {
 
 export const productService = {
   async page(params = {}) { const query = new URLSearchParams(Object.entries(params).filter(([, value]) => value !== undefined && value !== '')).toString(); const result = await api.get(`/products?${query}`); return { ...result, items: result.items.map(normalizeProduct) }; },
+  async mine(params = {}) { const result = await api.get(`/products/mine?${new URLSearchParams(params)}`); return { ...result, items: result.items.map(normalizeProduct) }; },
   async list(params = {}) { return (await this.page(params)).items; },
   async getById(id) { return normalizeProduct(await api.get(`/products/${id}`)); },
   async create(product, imageAsset) { return normalizeProduct(await api.upload('/products', productForm(product, imageAsset))); },
-  async update(id, product, imageAsset) { return normalizeProduct(await api.upload(`/products/${id}`, productForm(product, imageAsset), { method: 'PATCH' })); },
+  async update(id, product, imageAsset) {
+    if (!imageAsset && Object.keys(product).every(key => ['status', 'is_active'].includes(key))) {
+      return normalizeProduct(await api.patch(`/products/${id}`, product));
+    }
+    return normalizeProduct(await api.upload(`/products/${id}`, productForm(product, imageAsset), { method: 'PATCH' })); },
   remove: (id) => api.delete(`/products/${id}`)
 };

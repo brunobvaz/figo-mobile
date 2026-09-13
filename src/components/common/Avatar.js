@@ -8,7 +8,7 @@ export default function Avatar({ uri, name = '', size = 52 }) {
   const box = { width: size, height: size, borderRadius: size / 2 };
   return <View style={[styles.fallback, box]}>
     <Text style={[styles.initials, { fontSize: size * 0.34 }]}>{name.split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()}</Text>
-    {uri && failedUri !== uri ? <OptimizedImage imageWidth={size > 64 ? 320 : 160} source={{ uri }}
+    {uri && failedUri !== uri ? <OptimizedImage imageWidth={size > 160 ? 1280 : size > 64 ? 320 : 160} source={{ uri }}
       style={[styles.image, box]} onError={() => setFailedUri(uri)} /> : null}
   </View>;
 }

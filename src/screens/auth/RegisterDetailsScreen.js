@@ -21,7 +21,7 @@ export default function RegisterDetailsScreen({ navigation }) {
         if (!registration.email) return Alert.alert('Dados em falta', 'Volta ao primeiro passo e preenche os teus dados.');
         if (!form.location.municipalityCode || !form.location.parishCode) return Alert.alert('Localização em falta', 'Seleciona o concelho e a freguesia.');
         if (!form.confirmAdult) return Alert.alert('Confirmação necessária', 'Tens de confirmar que tens pelo menos 18 anos.');
-        if (!form.acceptTerms) return Alert.alert('Termos obrigatórios', 'Tens de aceitar os Termos e a Política de Privacidade.');
+        if (!form.acceptTerms) return Alert.alert('Termos obrigatórios', 'Tens de aceitar os Termos e Condições.');
         setIsLoading(true);
         try {
             const { firstName, lastName, email, password } = registration;
@@ -52,7 +52,11 @@ export default function RegisterDetailsScreen({ navigation }) {
         <Text style={styles.label}>Localização</Text>
         <AddressSelect {...form.location} onChange={location => setForm(current => ({ ...current, location }))} />
         <CheckRow checked={form.confirmAdult} label="Confirmo que tenho pelo menos 18 anos." onPress={() => toggle('confirmAdult')} />
-        <CheckRow checked={form.acceptTerms} label="Aceito os Termos e a Política de Privacidade." onPress={() => toggle('acceptTerms')} />
+        <CheckRow checked={form.acceptTerms} label="Li e aceito os Termos e Condições." onPress={() => toggle('acceptTerms')} />
+        <View style={styles.legalLinks}>
+            <Pressable accessibilityRole="link" onPress={() => navigation.navigate(ROUTES.LEGAL_DOCUMENT, { document: 'terms', title: 'Termos e Condições' })} style={styles.legalLink}><Text style={styles.legalText}>Ler Termos e Condições</Text></Pressable>
+            <Pressable accessibilityRole="link" onPress={() => navigation.navigate(ROUTES.LEGAL_DOCUMENT, { document: 'privacy', title: 'Política de Privacidade' })} style={styles.legalLink}><Text style={styles.legalText}>Consultar Política de Privacidade</Text></Pressable>
+        </View>
         <CheckRow checked={form.marketingConsent} label="Quero receber novidades e promoções (opcional)." onPress={() => toggle('marketingConsent')} />
         <Button title="Criar conta" loading={isLoading} onPress={submit} />
         <Button title="Voltar" variant="secondary" disabled={isLoading} onPress={() => navigation.goBack()} />
@@ -66,6 +70,9 @@ function CheckRow({ checked, label, onPress }) {
 }
 
 const styles = StyleSheet.create({
+    legalLinks: { gap: spacing.xs },
+    legalLink: { minHeight: 44, justifyContent: 'center' },
+    legalText: { color: colors.primaryDarkFigo, textDecorationLine: 'underline' },
     progress: { gap: spacing.sm }, step: { color: colors.primaryDarkFigo, fontWeight: '700' },
     track: { height: 5, borderRadius: 3, backgroundColor: colors.border, overflow: 'hidden' },
     fullTrack: { width: '100%', height: '100%', backgroundColor: colors.primaryFigo },

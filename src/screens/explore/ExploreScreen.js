@@ -1,5 +1,8 @@
+import LoadingScreen from '../../components/common/LoadingScreen';
+import { useIsFocused } from '@react-navigation/native';
+import useTabBarClearance from '../../hooks/useTabBarClearance';
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Chip from '../../components/common/Chip';
 import Input from '../../components/common/Input';
@@ -19,6 +22,8 @@ import spacing from '../../theme/spacing';
 
 const EMPTY_FILTERS = {};
 export default function ExploreScreen({ navigation, route }) {
+  const focused = useIsFocused();
+  const tabBarClearance = useTabBarClearance();
   const filters = route.params?.filters || EMPTY_FILTERS;
   const { products: cachedProducts } = useProducts();
   const [panel, setPanel] = useState(null);
@@ -60,7 +65,7 @@ export default function ExploreScreen({ navigation, route }) {
     <Button title="Limpar filtros" variant="secondary" onPress={clear} />
   </View> : null;
   const loadMore = results.hasMore ? <Button title="Carregar mais" variant="secondary" loading={results.busy} onPress={results.loadMore} /> : null;
-  return <Screen contentContainerStyle={styles.page}>
+  return <LoadingScreen blocking={false} loading={focused && !panel && results.busy && !results.products.length} message="A pesquisar produtos…"><Screen contentContainerStyle={styles.page}>
     <View style={styles.search}>
       <View style={styles.searchInput}><Input leadingIcon="search-outline" placeholder="Pesquisar produtos..." accessibilityLabel="Pesquisar produtos" value={filters.query || ''} maxLength={100} onChangeText={query => updateFilters({ query })} returnKeyType="search" /></View>
       {filters.query ? <Pressable accessibilityRole="button" accessibilityLabel="Limpar pesquisa" style={styles.clearSearch} onPress={() => updateFilters({ query: undefined })}><Ionicons name="close-circle" size={23} color={colors.primaryDarkFigo} /></Pressable> : null}
@@ -85,22 +90,21 @@ export default function ExploreScreen({ navigation, route }) {
       {hasExploreFilters(filters) ? <Pressable accessibilityRole="button" style={styles.sort} onPress={clear}><Text style={styles.link}>Limpar tudo</Text></Pressable> : null}
     </View>
     {results.error ? <View style={styles.feedback}><Text accessibilityRole="alert" style={styles.error}>{results.error}</Text><Button title="Tentar novamente" variant="secondary" onPress={results.retry} /></View> : null}
-    {results.busy ? <ActivityIndicator accessibilityLabel="A carregar produtos" color={colors.primaryFigo} /> : null}
     {viewMode === 'list' ? <FlatList key={columns} data={results.products} numColumns={columns} keyExtractor={item => String(item.id)} style={styles.results}
       keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
-      contentContainerStyle={styles.list} columnWrapperStyle={columns > 1 ? styles.row : undefined}
+      contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]} columnWrapperStyle={columns > 1 ? styles.row : undefined}
       initialNumToRender={6} maxToRenderPerBatch={6} windowSize={5}
       renderItem={({ item }) => <ProductCard product={item} showBadges style={{ width: cardWidth }} onPress={() => openProduct(item)} />}
       ListEmptyComponent={empty} ListFooterComponent={loadMore} />
       : <View style={styles.results}>
-        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView contentContainerStyle={styles.list}>{empty}</ScrollView>}
+        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]}>{empty}</ScrollView>}
         {loadMore}
       </View>}
     <ExploreFilterSheet panel={panel} filters={filters} onClose={() => setPanel(null)} onApply={updateFilters} region={region} onRegionChange={setRegion} onLocate={locate} locating={locating} producers={producers} />
-  </Screen>;
+  </Screen></LoadingScreen>;
 }
 const styles = StyleSheet.create({
-  page: { flex: 1, minHeight: 0, paddingTop: spacing.md, paddingBottom: spacing.sm, gap: spacing.sm },
+  page: { flex: 1, minHeight: 0, paddingTop: spacing.md, paddingBottom: 0, gap: spacing.sm },
   search: { flexDirection: 'row', alignItems: 'center', gap: 4 }, searchInput: { flex: 1 }, clearSearch: { width: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   segment: { flexDirection: 'row', borderRadius: 14, padding: 4, backgroundColor: colors.cream }, tab: { flex: 1, minHeight: 44, borderRadius: 11, flexDirection: 'row', gap: 8, alignItems: 'center', justifyContent: 'center' }, activeTab: { backgroundColor: colors.surface },
   tabText: { color: colors.textMuted, fontWeight: '600' }, activeText: { color: colors.primaryDarkFigo },

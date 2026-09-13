@@ -42,8 +42,8 @@ export default function useExploreProducts(filters, coordinates, region, enabled
   }, [requestKey, fetchPage, retry, enabled]);
   const current = enabled && state.key === requestKey;
   const editorial = useMemo(() => discoveryProducts(products), [products]);
-  const visible = useMemo(() => current ? applyEditorialFilters(state.items, filters, editorial) : [],
-    [current, state.items, filters.featured, filters.seasonal, filters.season, editorial]);
+  const visible = useMemo(() => current ? applyEditorialFilters(state.items.map(item => products.find(cached => cached.id === item.id) || item).filter(item => item.is_active !== false && (!filters.availableOnly || item.status === 'active')), filters, editorial) : [],
+    [current, state.items, products, filters.availableOnly, filters.featured, filters.seasonal, filters.season, editorial]);
   const hasMore = current && state.pagination?.page < state.pagination?.pages;
   return {
     products: visible, busy: enabled && (!current || state.busy), error: current ? state.error : '',

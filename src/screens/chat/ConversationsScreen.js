@@ -1,3 +1,5 @@
+import LoadingScreen from '../../components/common/LoadingScreen';
+import useTabBarClearance from '../../hooks/useTabBarClearance';
 import { Ionicons } from '@expo/vector-icons';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
@@ -6,7 +8,7 @@ import EmptyState from '../../components/common/EmptyState';
 import Header from '../../components/layout/Header';
 import Screen from '../../components/layout/Screen';
 import { useChat } from '../../context/ChatContext';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useIsFocused } from '@react-navigation/native';
 import { useCallback } from 'react';
 import Button from '../../components/common/Button';
 import { ROUTES } from '../../navigation/routes';
@@ -16,6 +18,8 @@ import spacing from '../../theme/spacing';
 import typography from '../../theme/typography';
 
 export default function ConversationsScreen({ navigation }) {
+  const focused = useIsFocused();
+  const tabBarClearance = useTabBarClearance();
     const { conversations, loading, error, refresh, loadMore, hasMore } = useChat();
     useFocusEffect(useCallback(() => { refresh(); }, [refresh]));
     const openConversation = (conversation) => navigation.navigate(ROUTES.CHAT, {
@@ -26,18 +30,18 @@ export default function ConversationsScreen({ navigation }) {
         productTitle: conversation.productTitle
     });
 
-    return <Screen contentContainerStyle={styles.page}>
+    return <LoadingScreen loading={focused && loading && !conversations.length} message="A carregar conversas…"><Screen contentContainerStyle={styles.page}>
         <Header title="Conversas" subtitle="As tuas mensagens com compradores e produtores" />
         <FlatList
             data={conversations}
             refreshing={loading}
             onRefresh={refresh}
             ListHeaderComponent={error ? <Text accessibilityRole="alert" style={styles.preview}>{error}</Text> : null}
-            ListFooterComponent={hasMore ? <Button title="Mais conversas" variant="secondary" onPress={loadMore} /> : null}
+            ListFooterComponent={hasMore ? <Button title="Mais conversas" loading={loading} variant="secondary" onPress={loadMore} /> : null}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.list}
+            contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]}
             showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
+            ListEmptyComponent={loading ? null :
                 <EmptyState
                     title={loading ? 'A carregar conversas…' : 'Ainda não tens conversas'}
                     message={loading ? 'A obter as tuas mensagens.' : 'Contacta um vendedor a partir da página de um produto.'}
@@ -67,7 +71,7 @@ export default function ConversationsScreen({ navigation }) {
                 </Pressable>
             }
         />
-    </Screen>;
+    </Screen></LoadingScreen>;
 }
 
 const styles = StyleSheet.create({

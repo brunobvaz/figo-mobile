@@ -84,7 +84,7 @@ function TabNavigator() {
             </Tabs.Navigator>; }
 
 export default function MainNavigator() { 
-    return <Stack.Navigator screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
+    return <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
                 <Stack.Screen name={ROUTES.LEGAL_INFO} component={LegalInfoScreen} options={{ title: 'Informação legal' }} />
         <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />

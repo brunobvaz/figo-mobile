@@ -29,10 +29,11 @@ export default function ProductCard({ product, onPress, compact = false, style, 
     const locationNote = [product.locationSource === 'parish' ? 'Localização aproximada' : '', ].filter(Boolean).join(' · ');
 
     return <Pressable onPress={onPress} style={[styles.card, homeVariant && (variant === 'featured' ? styles.featuredCard : styles.smallCard), compact && styles.compact, style]}>
-        <View>{product.image && failedImage !== product.image ? <OptimizedImage
+        <View style={compact && styles.compactImageContainer}>{product.image && failedImage !== product.image ? <OptimizedImage
             source={{ uri: product.image }}
             onError={() => setFailedImage(product.image)}
             style={imageStyle}
+            resizeMode="cover"
         /> : <View accessibilityLabel="Imagem indisponível" style={[imageStyle, styles.placeholder]}><Ionicons name="leaf-outline" size={32} color={colors.primaryDarkFigo} /></View>}
             {homeVariant && variant === 'featured' ? <View pointerEvents="none" style={styles.featuredBadge}>
                 <Text style={styles.featuredBadgeText}>Em destaque</Text>
@@ -114,9 +115,17 @@ const styles = StyleSheet.create({
         height: 142,
         backgroundColor: colors.primaryLightFigo
     },
-    compactImage: {
+    compactImageContainer: {
         width: 120,
-        height: 132
+        minHeight: 132,
+        alignSelf: 'stretch',
+        flexShrink: 0
+    },
+    compactImage: {
+        flex: 1,
+        width: 120,
+        minHeight: 132,
+        height: undefined
     },
     favorite: {
         position: 'absolute',

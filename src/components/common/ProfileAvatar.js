@@ -8,7 +8,7 @@ export default function ProfileAvatar({ uri, name = '', size = 88 }) {
   const [visible, setVisible] = useState(false);
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const expandedSize = Math.max(80, Math.min(width - 40, height - insets.top - insets.bottom - 160, 560));
+  const expandedSize = Math.max(80, Math.min((width - 40) * 0.8, height - insets.top - insets.bottom - 160, 448));
   const close = () => setVisible(false);
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={`Ampliar fotografia de ${name}`} onPress={() => setVisible(true)}>

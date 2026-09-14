@@ -10,6 +10,9 @@
     "ios": {
       "appleTeamId": "9T837KG949",
       "bundleIdentifier": "com.brunobvaz.daterra.bench",
+        "associatedDomains": [
+       "applinks:links.figo-app.com"
+        ],
       "supportsTablet": true,
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false

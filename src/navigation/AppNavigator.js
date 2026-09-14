@@ -13,7 +13,7 @@ import { navigationRef } from './navigationRef';
 import { ROUTES } from './routes';
 
 const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colors.primary, background: colors.background, card: colors.surface, text: colors.text, border: colors.border, notification: colors.error } };
-const linking = { prefixes: ['daterra://'], config: { screens: { [ROUTES.RESET_PASSWORD]: 'reset-password' } } };
+const linking = { prefixes: ['daterra://', 'https://links.figo-app.com',], config: { screens: { [ROUTES.RESET_PASSWORD]: 'reset-password' } } };
 
 export default function AppNavigator() {
   const { user, isAuthenticated, isRestoring } = useAuth();

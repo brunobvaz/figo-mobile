@@ -1,3 +1,4 @@
+import AccountClosureScreen from '../screens/profile/AccountClosureScreen';
 import LoadingScreen from '../components/common/LoadingScreen';
 import { useCallback, useState } from 'react';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
@@ -16,7 +17,7 @@ const theme = { ...DefaultTheme, colors: { ...DefaultTheme.colors, primary: colo
 const linking = { prefixes: ['daterra://', 'https://links.figo-app.com',], config: { screens: { [ROUTES.RESET_PASSWORD]: 'reset-password' } } };
 
 export default function AppNavigator() {
-  const { user, isAuthenticated, isRestoring } = useAuth();
+  const { user, accountClosure, isAuthenticated, isRestoring } = useAuth();
   const [splashReady, setSplashReady] = useState(false);
   const onSplashReady = useCallback(() => setSplashReady(true), []);
 
@@ -26,6 +27,8 @@ export default function AppNavigator() {
   }
 
   if (isRestoring) return <LoadingScreen message="A preparar a Figo…" />;
+
+  if (accountClosure) return <AccountClosureScreen />;
 
   return (
     <NavigationContainer

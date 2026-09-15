@@ -1,3 +1,4 @@
+import useAuth from '../../hooks/useAuth';
 import { Image, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Button from '../../components/common/Button';
@@ -7,6 +8,7 @@ import { ROUTES } from '../../navigation/routes';
 
 export default function WelcomeScreen({ navigation }) {
   const insets = useSafeAreaInsets();
+  const { pendingDeletion, showAccountClosure } = useAuth();
 
   return (
     <View style={styles.screen}>
@@ -38,6 +40,7 @@ export default function WelcomeScreen({ navigation }) {
         left: insets.left + 24,
         right: insets.right + 24,
       }]}>
+        {pendingDeletion && <Button title="Consultar eliminação de conta" variant="secondary" onPress={showAccountClosure} style={styles.button} />}
         <Button title="Entrar" onPress={() => navigation.navigate(ROUTES.LOGIN)} style={styles.button} />
         <Button title="Registar" onPress={() => navigation.navigate(ROUTES.REGISTER)} variant="secondary" style={styles.button} />
       </View>

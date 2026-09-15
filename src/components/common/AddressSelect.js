@@ -10,7 +10,7 @@ import { locationService } from '../../services/locationService';
 
 const normalize = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
-export default function AddressSelect({ municipalityCode, parishCode, onChange, open: controlledOpen, onOpenChange }) {
+export default function AddressSelect({ municipalityCode, parishCode, onChange, open: controlledOpen, onOpenChange, compact = false, disabled = false }) {
   const [municipalities, setMunicipalities] = useState([]);
   const [savedParishes, setSavedParishes] = useState([]);
   const [items, setItems] = useState([]);
@@ -86,15 +86,17 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={`Localização: ${title}. Selecionar concelho e freguesia`}
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={() => { setSelectedMunicipality(null); setQuery(''); setOpen(true); }}
-      style={({ pressed }) => [styles.card, pressed && { opacity: 0.75 }]}
+      style={({ pressed }) => [styles.card, compact && styles.compactCard, (pressed || disabled) && { opacity: 0.75 }]}
     >
-      <Ionicons name="location" size={36} color={colors.primaryDarkFigo} />
+      <Ionicons name="location" size={compact ? 30 : 36} color={colors.primaryDarkFigo} />
       <View style={styles.copy}>
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
+        <Text style={[styles.title, compact && styles.compactTitle]}>{title}</Text>
+        <Text style={[styles.subtitle, compact && styles.compactSubtitle]}>{subtitle}</Text>
       </View>
-      <Ionicons name="chevron-forward" size={22} color="#505B70" />
+      <Ionicons name="chevron-forward" size={compact ? 20 : 22} color="#505B70" />
     </Pressable>
     <Modal visible={open} animationType="slide" onRequestClose={() => setOpen(false)}>
       {/* Native modals need their own provider to measure the presented window's insets. */}
@@ -130,7 +132,10 @@ export default function AddressSelect({ municipalityCode, parishCode, onChange, 
 
 const styles = StyleSheet.create({
   card: { flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 82, padding: 16, borderRadius: 14, borderWidth: 1, borderColor: '#DFE1E8', backgroundColor: colors.surface },
-  copy: { flex: 1, gap: 4 },
+  compactCard: { minHeight: 66, paddingVertical: 12, paddingHorizontal: 14, gap: 12, borderColor: '#E4E1E8' },
+  compactTitle: { fontSize: 16, color: '#19172C' },
+  compactSubtitle: { fontSize: 13, lineHeight: 18 },
+  copy: { flex: 1, minWidth: 0, gap: 4 },
   title: { fontSize: 18, fontWeight: '600', color: '#1E2942' },
   subtitle: { fontSize: 14, color: '#80889D' },
   modal: { flex: 1, padding: 20, gap: 14, backgroundColor: colors.background },

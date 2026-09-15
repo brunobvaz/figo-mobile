@@ -18,7 +18,7 @@ import useAuth from '../../hooks/useAuth';
 import { useChat } from '../../context/ChatContext';
 import { chatService } from '../../services/chatService';
 import { createId } from '../../utils/helpers';
-import { mergeMessages } from '../../utils/chatMessages';
+import { mergeMessages, redactRemovedParticipant } from '../../utils/chatMessages';
 
 export default function ChatScreen({ route, navigation }) {
   const { conversationId: initialId, productId, productTitle } = route.params || {};
@@ -31,6 +31,8 @@ export default function ChatScreen({ route, navigation }) {
   const [id, setId] = useState(initialId);
   const contextProduct = useConversationProduct({ conversationId: id, productId, productTitle, focused });
   const [message, setMessage] = useState('');
+  const [availability, setAvailability] = useState({ canSend: false });
+  const availabilityRef = useRef({ canSend: false });
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
@@ -58,9 +60,21 @@ export default function ChatScreen({ route, navigation }) {
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
   active.current = focused && appState === 'active';
   const updateMessages = useCallback((incoming) => {
-    rows.current = mergeMessages(rows.current, incoming);
+    rows.current = redactRemovedParticipant(mergeMessages(rows.current, incoming), availabilityRef.current.participant);
     setMessages(rows.current);
   }, []);
+
+  const updateAvailability = useCallback(page => {
+    if (['deleted', 'deletion_pending'].includes(availabilityRef.current.participant?.status) && !['deleted', 'deletion_pending'].includes(page.participant?.status)) return;
+    availabilityRef.current = page;
+    setAvailability(page);
+    if (page.participant?.name) navigation.setOptions({ title: page.participant.name });
+    if (['deleted', 'deletion_pending'].includes(page.participant?.status)) {
+      // Include older pages already in memory, not only this poll's recent page.
+      rows.current = redactRemovedParticipant(rows.current, page.participant);
+      setMessages(rows.current);
+    }
+  }, [navigation]);
 
   useEffect(() => {
     alive.current = true;
@@ -98,6 +112,7 @@ export default function ChatScreen({ route, navigation }) {
         }
         if (cancelled) return;
         if (!newestKnown) setCursor(firstCursor);
+        updateAvailability(page);
         updateMessages(incoming);
         setError(null);
       } catch (failure) { if (!cancelled) setError(failure.message); }
@@ -106,7 +121,7 @@ export default function ChatScreen({ route, navigation }) {
     sync();
     const timer = setInterval(sync, 4000);
     return () => { cancelled = true; clearInterval(timer); };
-  }, [id, focused, appState, updateMessages, attempt]);
+  }, [id, focused, appState, updateMessages, updateAvailability, attempt]);
 
   const acknowledgeVisible = useCallback(async () => {
     if (!id || !active.current) return;
@@ -130,7 +145,7 @@ export default function ChatScreen({ route, navigation }) {
 
   const send = async (retry) => {
     const text = retry?.text || message.trim();
-    if (!id || !text || sendLock.current) return;
+    if (!id || !text || sendLock.current || !availabilityRef.current.canSend) return;
     sendLock.current = true;
     setSending(true);
     const pending = retry || { id: createId('pending'), clientId: createId('message'), senderId: user.id, text, createdAt: new Date().toISOString() };
@@ -146,6 +161,10 @@ export default function ChatScreen({ route, navigation }) {
         const confirmed = rows.current.some((item) => item.clientId === pending.clientId && item.senderId === user.id && !item.status);
         if (!confirmed) updateMessages([{ ...pending, status: 'failed' }]);
         setError(failure.message);
+        if (failure.code === 'CONVERSATION_UNAVAILABLE') {
+          availabilityRef.current = { canSend: false, unavailableReason: failure.message };
+          setAvailability(availabilityRef.current); setAttempt(value => value + 1);
+        }
       }
     } finally { sendLock.current = false; if (alive.current) setSending(false); }
   };
@@ -154,7 +173,7 @@ export default function ChatScreen({ route, navigation }) {
     setLoadingOlder(true);
     try {
       const result = await chatService.messages(id, cursor);
-      if (alive.current) { updateMessages(result.items); setCursor(result.nextCursor); }
+      if (alive.current) { updateAvailability(result); updateMessages(result.items); setCursor(result.nextCursor); }
     } catch (failure) { if (alive.current) setError(failure.message); }
     finally { if (alive.current) setLoadingOlder(false); }
   };
@@ -163,7 +182,7 @@ export default function ChatScreen({ route, navigation }) {
   // On iOS resize the whole conversation, including the composer, below the native header.
   return <LoadingScreen loading={focused && (loading || contextProduct.loading)} message="A carregar conversa…"><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
     <Screen contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
-      <ProductContextCard product={contextProduct.product} title={contextProduct.title} loading={contextProduct.loading}
+      <ProductContextCard product={availability.participant?.status && availability.participant.status !== 'active' ? null : contextProduct.product} title={availability.productTitle || contextProduct.title} loading={contextProduct.loading}
         onPress={() => navigation.push(ROUTES.PRODUCT_DETAILS, { productId: contextProduct.productId })} />
       {error ? <View><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Tentar novamente" variant="secondary" onPress={() => setAttempt((value) => value + 1)} /></View> : null}
       <FlatList ref={list} inverted data={[...messages].reverse()} keyExtractor={(item) => `${item.senderId}:${item.clientId}`}
@@ -173,18 +192,18 @@ export default function ChatScreen({ route, navigation }) {
         onLayout={keepLatestVisible} onContentSizeChange={keepLatestVisible}
         onScroll={({ nativeEvent }) => { nearLatest.current = nativeEvent.contentOffset.y <= spacing.xl; }} scrollEventThrottle={16}
         onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig}
-        ListEmptyComponent={<Text style={sharedStyles.helperNote}>{loading ? 'A carregar mensagens…' : 'Ainda não existem mensagens. Escreve para iniciar a conversa.'}</Text>}
+        ListEmptyComponent={<Text style={sharedStyles.helperNote}>{loading ? 'A carregar mensagens…' : availability.canSend ? 'Ainda não existem mensagens. Escreve para iniciar a conversa.' : 'Ainda não existem mensagens.'}</Text>}
         ListFooterComponent={cursor ? <Button title="Mensagens anteriores" variant="secondary" loading={loadingOlder} onPress={loadOlder} /> : null}
         renderItem={({ item }) => <View>
           <MessageBubble message={item.text} own={item.senderId === user.id} />
           <Text style={styles.time}>{new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}{item.status === 'sending' ? ' · A enviar…' : ''}</Text>
-          {item.status === 'failed' ? <Button title="Reenviar mensagem" variant="secondary" disabled={sending} onPress={() => send(item)} /> : null}
+          {item.status === 'failed' ? <Button title="Reenviar mensagem" variant="secondary" disabled={sending || !availability.canSend} onPress={() => send(item)} /> : null}
         </View>}
       />
-      <View style={styles.composer}>
+      {availability.canSend ? <View style={styles.composer}>
         <Input placeholder="Escreve uma mensagem..." value={message} onChangeText={setMessage} onFocus={scrollToLatest} maxLength={2000} returnKeyType="send" blurOnSubmit={false} onSubmitEditing={() => send()} style={styles.messageInput} />
         <Button title="Enviar" loading={sending} disabled={!id || !message.trim() || sending} onPress={() => send()} style={styles.sendButton} />
-      </View>
+      </View> : <Text accessibilityRole="alert" style={sharedStyles.helperNote}>{availability.unavailableReason || 'A confirmar a disponibilidade da conversa…'}</Text>}
     </Screen>
   </KeyboardAvoidingView></LoadingScreen>;
 }

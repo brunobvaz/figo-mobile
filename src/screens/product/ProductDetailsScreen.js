@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { productService } from '../../services/productService';
 import { belongsToSeller } from '../../utils/accountProducts';
-import OptimizedImage from '../../components/common/OptimizedImage';
+import ProductPhotoGallery from '../../components/product/ProductPhotoGallery';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
@@ -42,7 +42,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
         return () => { active = false; };
     }, [productId, user?.id, cacheProducts, retry]));
     const product = getProductById(productId);
-    if (loading && !product) return <Loading />;
+    if (loading) return <Loading />;
     if (error || !product) return <Screen><Text accessibilityRole="alert">{error || 'Produto não encontrado.'}</Text><Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} /></Screen>;
     const changeState = async changes => {
         if (savingRef.current) return;
@@ -88,7 +88,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
     return <Screen safeAreaEdges={[]} contentContainerStyle={styles.page}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
         <View>
-        <OptimizedImage imageWidth={1280} source={{ uri: product.image }} style={styles.image} resizeMode="contain" />
+        <ProductPhotoGallery key={`${product.id}:${product.imagesRevision}`} photos={product.images || []} title={product.title} />
         <Pressable accessibilityRole="button" accessibilityLabel={favorite ? 'Remover dos favoritos' : 'Guardar nos favoritos'} accessibilityState={{ selected: favorite }} onPress={() => toggleFavorite(product.id)} style={styles.favorite}><Ionicons name={favorite ? 'heart' : 'heart-outline'} size={26} color={colors.primaryDarkFigo} /></Pressable>
         </View>
         <View style={styles.body}>
@@ -166,7 +166,6 @@ const styles = StyleSheet.create({
     disabled: { opacity: 0.5 },
     removeAction: { minHeight: 46, borderRadius: 12, backgroundColor: '#FDEBEC', borderWidth: 1, borderColor: '#EBA5AA', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
     removeText: { color: '#B4232D', fontWeight: '600' },
-    image: { width: '100%', aspectRatio: 4 / 3, backgroundColor: colors.surface },
     body: { padding: spacing.md, gap: spacing.md },
     category: { color: colors.primaryFigo, fontWeight: '700', textTransform: 'uppercase', fontSize: 12 },
     title: { color: colors.text, fontSize: 28, fontWeight: '800' },

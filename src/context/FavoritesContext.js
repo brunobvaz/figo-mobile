@@ -1,10 +1,7 @@
 import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { getStoredItem, setStoredItem } from '../storage/storage';
-import { createAccountFavoritesStore } from '../storage/accountFavorites';
-import { STORAGE_KEYS } from '../utils/constants';
+import { favoritesStore as store } from '../storage/favoritesStore';
 import useAuth from '../hooks/useAuth';
 export const FavoritesContext = createContext(null);
-const store = createAccountFavoritesStore(getStoredItem, setStoredItem, STORAGE_KEYS.FAVORITES);
 
 export function FavoritesProvider({ children }) {
   const { user } = useAuth();

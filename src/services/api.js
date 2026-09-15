@@ -19,38 +19,44 @@ const refreshTokens = async () => {
     method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ refreshToken })
   });
   const payload = await parseResponse(response);
-  if (!response.ok) throw new Error(payload?.error?.message || 'A sessão expirou.');
+  if (!response.ok) { const error = new Error(payload?.error?.message || 'A sessão expirou.'); error.code = payload?.error?.code; error.status = response.status; throw error; }
   await tokenStorage.save(payload.data);
   return payload.data.accessToken;
 };
 
 const request = async (path, options = {}, allowRefresh = true) => {
+  const { timeoutMs = config.requestTimeout, ...fetchOptions } = options;
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), config.requestTimeout);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const accessToken = await tokenStorage.getAccessToken();
     const isFormData = typeof FormData !== 'undefined' && options.body instanceof FormData;
     // Expo File multipart bodies need Expo's serializer to include their bytes.
     const requestFetch = isFormData ? expoFetch : fetch;
     const response = await requestFetch(`${config.apiBaseUrl}${path}`, {
-      ...options,
+      ...fetchOptions,
       signal: controller.signal,
       headers: { Accept: 'application/json', ...(!isFormData ? { 'Content-Type': 'application/json' } : {}), ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}), ...options.headers },
     });
     const payload = await parseResponse(response);
-    const canRefresh = response.status === 401 && allowRefresh && !path.startsWith('/auth/login') && !path.startsWith('/auth/refresh');
+    const canRefresh = response.status === 401 && allowRefresh && !path.startsWith('/auth/login') && !path.startsWith('/auth/refresh') && !path.startsWith('/auth/account/') && payload?.error?.code !== 'AUTH_INVALID_CURRENT_PASSWORD';
     if (canRefresh && await tokenStorage.getRefreshToken()) {
       try {
         refreshPromise ||= refreshTokens().finally(() => { refreshPromise = null; });
         await refreshPromise;
         return request(path, options, false);
-      } catch {
+      } catch (error) {
+        if (!error.status) throw error;
         await tokenStorage.clear();
-        unauthorizedHandler?.();
-        throw new Error('A sessão expirou. Volta a iniciar sessão.');
+        await unauthorizedHandler?.(error.code);
+        throw error;
       }
     }
     if (!response.ok) {
+      if (accessToken && !path.startsWith('/auth/account/') && !path.startsWith('/auth/login') && ['USER_DEACTIVATED', 'USER_DELETED', 'USER_DELETION_PENDING', 'USER_SUSPENDED'].includes(payload?.error?.code)) {
+        await tokenStorage.clear();
+        await unauthorizedHandler?.(payload.error.code);
+      }
       const error = new Error(payload?.error?.message || 'Não foi possível concluir o pedido.');
       error.code = payload?.error?.code;
       error.status = response.status;

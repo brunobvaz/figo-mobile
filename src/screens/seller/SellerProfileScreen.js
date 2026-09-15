@@ -1,10 +1,13 @@
+import { useCallback, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { productService } from '../../services/productService';
+import Loading from '../../components/common/Loading';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import ProfileAvatar from '../../components/common/ProfileAvatar';
 import EmptyState from '../../components/common/EmptyState';
 import Screen from '../../components/layout/Screen';
 import ProductList from '../../components/product/ProductList';
-import useProducts from '../../hooks/useProducts';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import { formatDate } from '../../utils/formatters';
@@ -13,9 +16,18 @@ import { locationLabel, profileLocation } from '../../utils/activeLocation';
 export default function SellerProfileScreen({ route, navigation }) {
     
     const insets = useSafeAreaInsets();
-    const { products } = useProducts();
-    const seller = products.find((item) => item.seller?.id === route.params.sellerId)?.seller; if (!seller) return <EmptyState title="Vendedor não encontrado" />;
-    const sellerProducts = products.filter((item) => item.is_active !== false && item.seller?.id === seller.id);
+    const [sellerProducts, setSellerProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    useFocusEffect(useCallback(() => {
+        let active = true;
+        setLoading(true); setSellerProducts([]);
+        productService.list({ sellerId: route.params.sellerId, limit: 100 }).then(items => { if (active) setSellerProducts(items); })
+            .catch(() => {}).finally(() => { if (active) setLoading(false); });
+        return () => { active = false; };
+    }, [route.params.sellerId]));
+    if (loading) return <Loading />;
+    const seller = sellerProducts[0]?.seller;
+    if (!seller) return <Screen><EmptyState title="Vendedor indisponível" description="Este perfil não tem anúncios públicos disponíveis." /></Screen>;
     const memberSince = formatDate(seller.createdAt);
 
     const header = <View style={styles.header}>

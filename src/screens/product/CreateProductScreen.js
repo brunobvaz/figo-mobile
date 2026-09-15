@@ -1,7 +1,10 @@
-import OptimizedImage from '../../components/common/OptimizedImage';
+import ProductPhotoPicker from '../../components/product/ProductPhotoPicker';
+import Loading from '../../components/common/Loading';
+import { productService } from '../../services/productService';
+import { MAX_PRODUCT_PHOTOS, addSelectedPhotos, editableProductPhotos } from '../../utils/productPhotos';
 import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
@@ -21,9 +24,26 @@ import { validateProduct } from '../../utils/validators';
 const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', self_harvest: false, seasonality: 'all_year', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
 
 export default function CreateProductScreen({ navigation, route }) {
-    const { createProduct, updateProduct, getProductById } = useProducts();
     const productId = route?.params?.productId;
-    const existingProduct = productId ? getProductById(productId) : null;
+    const { cacheProducts } = useProducts();
+    const [loaded, setLoaded] = useState(null);
+    const [loadError, setLoadError] = useState('');
+    const [attempt, setAttempt] = useState(0);
+    useEffect(() => {
+        if (!productId) return;
+        let active = true;
+        setLoaded(null); setLoadError('');
+        productService.getById(productId).then(product => { if (active) { cacheProducts([product]); setLoaded(product); } })
+            .catch(error => { if (active) setLoadError(error.message); });
+        return () => { active = false; };
+    }, [productId, attempt, cacheProducts]);
+    if (productId && loadError) return <Screen><Text accessibilityRole="alert">{loadError}</Text><Button title="Tentar novamente" onPress={() => setAttempt(value => value + 1)} /></Screen>;
+    if (productId && loaded?.id !== productId) return <Loading />;
+    return <ProductForm key={productId || 'new'} navigation={navigation} existingProduct={productId ? loaded : null} />;
+}
+
+function ProductForm({ navigation, existingProduct }) {
+    const { createProduct, updateProduct } = useProducts();
     const [form, setForm] = useState(existingProduct ? {
         title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
         self_harvest: ['Frutas', 'Legumes'].includes(existingProduct.category) && existingProduct.self_harvest === true,
@@ -32,47 +52,59 @@ export default function CreateProductScreen({ navigation, route }) {
     } : { ...emptyProduct });
     const [errors, setErrors] = useState({});
     const [saving, setSaving] = useState(false);
-    const [imageAsset, setImageAsset] = useState(null);
+    const [photos, setPhotos] = useState(() => editableProductPhotos(existingProduct));
+    const [imagesRevision, setImagesRevision] = useState(existingProduct?.imagesRevision || 0);
+    const [picking, setPicking] = useState(false);
+    const savingRef = useRef(false);
+    const pickingRef = useRef(false);
     const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value, ...(key === 'category' && !['Frutas', 'Legumes'].includes(value) ? { self_harvest: false } : {}) }));
     const submit = async () => {
+        if (savingRef.current || pickingRef.current) return;
         const nextErrors = validateProduct(form); if (Object.keys(nextErrors).length) return setErrors(nextErrors);
-        if (!imageAsset && !existingProduct?.image) return Alert.alert('Imagem necessária', 'Seleciona uma imagem do produto.');
-        const payload = { ...form, price: parsePrice(form.price) };
+        if (!photos.length) return Alert.alert('Fotografia necessária', 'Seleciona pelo menos uma fotografia do produto.');
+        const payload = { ...form, price: parsePrice(form.price), imagesRevision };
+        savingRef.current = true;
         setSaving(true);
         try {
             if (existingProduct) {
-                await updateProduct(existingProduct.id, payload, imageAsset);
+                const item = await updateProduct(existingProduct.id, payload, photos);
+                setPhotos(editableProductPhotos(item)); setImagesRevision(item.imagesRevision);
                 Alert.alert('Produto atualizado', 'As alterações foram guardadas.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
             } else {
-                const item = await createProduct(payload, imageAsset);
+                const item = await createProduct(payload, photos);
                 setForm({ ...emptyProduct });
-                setImageAsset(null);
+                setPhotos([]); setImagesRevision(0);
                 Alert.alert('Anúncio publicado', 'O produto já está disponível no marketplace.', [{ text: 'Ver produto', onPress: () => navigation.navigate('ProductDetails', { productId: item.id }) }]);
             }
         } catch (error) { Alert.alert('Não foi possível guardar', error.message); }
-        finally { setSaving(false); }
+        finally { savingRef.current = false; setSaving(false); }
     };
-    const chooseImage = async () => {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) return Alert.alert('Permissão necessária', 'Autoriza o acesso às fotografias para escolher uma imagem do produto.');
-        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [4, 3], quality: 0.8 });
-        if (result.canceled) return;
-        const asset = result.assets[0];
-        if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) return Alert.alert('Imagem demasiado grande', 'Escolhe uma imagem com menos de 5 MB.');
-        setImageAsset(asset);
+    const chooseImages = async () => {
+        if (savingRef.current || pickingRef.current || photos.length >= MAX_PRODUCT_PHOTOS) return;
+        pickingRef.current = true; setPicking(true);
+        try {
+            const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (!permission.granted) return Alert.alert('Permissão necessária', 'Autoriza o acesso às fotografias para escolher imagens do produto.');
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'], allowsMultipleSelection: true, allowsEditing: false,
+                selectionLimit: MAX_PRODUCT_PHOTOS - photos.length, orderedSelection: true, quality: 0.8,
+                preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
+                shouldDownloadFromNetwork: true
+            });
+            if (result.canceled) return;
+            const selection = addSelectedPhotos(photos, result.assets);
+            setPhotos(selection.photos);
+            const warnings = [selection.tooLarge ? 'Cada fotografia pode ter até 5 MB.' : '', selection.unsupported ? 'Escolhe fotografias JPEG, PNG ou WebP.' : '', selection.excess ? 'Podes adicionar até 6 fotografias.' : ''].filter(Boolean);
+            if (warnings.length) Alert.alert('Algumas fotografias não foram adicionadas', warnings.join('\n'));
+        } catch (error) { Alert.alert('Não foi possível selecionar as fotografias', error.message); }
+        finally { pickingRef.current = false; setPicking(false); }
     };
 
     return <Screen scroll contentContainerStyle={styles.page}>
         <Text style={styles.title}>{existingProduct ? 'Editar produto' : 'O que tens para partilhar?'}</Text>
-        <View style={styles.card}>
-        <ProductFieldHeading title="Fotografia" subtitle="Escolhe uma fotografia que mostre bem o produto." />
-        <Pressable accessibilityRole="button" accessibilityLabel="Escolher imagem do produto" onPress={chooseImage} style={styles.placeholder}>
-            {imageAsset?.uri || existingProduct?.image
-                ? <OptimizedImage source={{ uri: imageAsset?.uri || existingProduct.image }} style={styles.preview} />
-                : <><Text style={styles.placeholderIcon}>📷</Text><Text style={styles.placeholderText}>Carregar imagem</Text></>}
-        </Pressable>
-        <Button title={imageAsset || existingProduct?.image ? 'Alterar imagem' : 'Escolher imagem'} variant="secondary" onPress={chooseImage} />
-        </View>
+        <ProductPhotoPicker photos={photos} disabled={saving || picking} loading={picking} onAdd={chooseImages}
+            onRemove={index => setPhotos(current => current.filter((_, position) => position !== index))}
+            onCover={index => setPhotos(current => [current[index], ...current.filter((_, position) => position !== index)])} />
         <View style={styles.card}>
         <ProductFieldHeading title="Título" subtitle="Dá um nome simples e claro ao produto." />
         <Input
@@ -137,6 +169,7 @@ export default function CreateProductScreen({ navigation, route }) {
         <Button
             title={existingProduct ? 'Guardar alterações' : 'Publicar anúncio'}
             loading={saving}
+            disabled={picking}
             onPress={submit}
         />
     </Screen>
@@ -174,9 +207,6 @@ const styles = StyleSheet.create({
     page: { paddingTop: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
     activationText: { color: colors.textMuted, lineHeight: 22 },
     title: { color: colors.primaryDarkFigo, fontSize: 26, fontWeight: '800' },
-    placeholder: { height: 150, borderWidth: 1, borderStyle: 'dashed', borderColor: colors.primaryFigo, borderRadius: 18, backgroundColor: colors.cream, alignItems: 'center', justifyContent: 'center' },
-    preview: { width: '100%', height: '100%', borderRadius: 18 },
-    placeholderIcon: { fontSize: 32 }, placeholderText: { color: colors.textMuted },
     choice: { gap: spacing.sm },
     card: {
         backgroundColor: colors.surface,

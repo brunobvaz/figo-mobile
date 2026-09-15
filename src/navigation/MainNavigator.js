@@ -1,3 +1,4 @@
+import AccountActionScreen from '../screens/profile/AccountActionScreen';
 import LegalInfoScreen from '../screens/legal/LegalInfoScreen';
 import LegalDocumentScreen from '../screens/legal/LegalDocumentScreen';
 import { useEffect, useState } from 'react';
@@ -86,6 +87,7 @@ function TabNavigator() {
 export default function MainNavigator() { 
     return <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
                 <Stack.Screen name={ROUTES.LEGAL_INFO} component={LegalInfoScreen} options={{ title: 'Informação legal' }} />
+        <Stack.Screen name={ROUTES.ACCOUNT_ACTION} component={AccountActionScreen} options={{ headerShown: true, title: 'Conta', headerBackTitle: 'Voltar' }} />
         <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
                 <Stack.Screen name={ROUTES.SEASONAL_RECIPES} component={SeasonalRecipesScreen} options={{ title: 'Receitas da época' }} />

@@ -27,6 +27,16 @@ export default function LoginScreen({ navigation }) {
             await login({ email, password });
         }
         catch (error) {
+            if (error.code === 'USER_DEACTIVATED') {
+                setPassword('');
+                navigation.navigate(ROUTES.ACCOUNT_ACTION, { mode: 'reactivate', email: email.trim() });
+                return;
+            }
+            if (error.code === 'USER_DELETION_PENDING') {
+                setPassword('');
+                navigation.navigate(ROUTES.ACCOUNT_ACTION, { mode: 'delete', email: email.trim() });
+                return;
+            }
             if (error.code === 'EMAIL_NOT_VERIFIED' && error.details?.challengeId) {
                 navigation.navigate(ROUTES.OTP_VERIFICATION, error.details);
                 return;

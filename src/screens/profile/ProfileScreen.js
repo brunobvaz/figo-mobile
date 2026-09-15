@@ -1,23 +1,37 @@
 import { useCallback, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { productService } from '../../services/productService';
-import { Alert, Linking, Pressable, StyleSheet, Text, View } from 'react-native'; 
+import { Alert, AppState, Linking, Pressable, StyleSheet, Switch, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import ProfileAvatar from '../../components/common/ProfileAvatar';
-import Button from '../../components/common/Button'; 
-import Screen from '../../components/layout/Screen'; 
-import useAuth from '../../hooks/useAuth'; 
+import Button from '../../components/common/Button';
+import Screen from '../../components/layout/Screen';
+import useAuth from '../../hooks/useAuth';
 import useFavorites from '../../hooks/useFavorites';
 import { ROUTES } from '../../navigation/routes';
-import colors from '../../theme/colors'; 
-import spacing from '../../theme/spacing';
-import { registerPushNotifications } from '../../services/pushNotifications';
+import { productService } from '../../services/productService';
+import { getNotifications, registerPushNotifications } from '../../services/pushNotifications';
 import { locationLabel, profileLocation } from '../../utils/activeLocation';
+import colors from '../../theme/colors';
+import spacing from '../../theme/spacing';
 
-export default function ProfileScreen({ navigation }) { 
-    const { user, logout } = useAuth(); 
+const profileColors = {
+    text: '#15151C',
+    muted: '#7B8088',
+    lavender: '#F1EAF5',
+    iconBackground: '#F7F1FB',
+};
+
+export default function ProfileScreen({ navigation }) {
+    const { user, logout } = useAuth();
     const { favoriteIds } = useFavorites();
+    const { width, fontScale } = useWindowDimensions();
+    const heroWidth = Math.min(width, 560);
     const [mine, setMine] = useState(null);
+    const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+    const [checkingNotifications, setCheckingNotifications] = useState(true);
+    const [updatingNotifications, setUpdatingNotifications] = useState(false);
+    const editProfile = () => navigation.navigate(ROUTES.EDIT_PROFILE);
+
     useFocusEffect(useCallback(() => {
         let active = true;
         setMine(null);
@@ -25,91 +39,230 @@ export default function ProfileScreen({ navigation }) {
             if (active) setMine(result.pagination.total);
         }).catch(() => {});
         return () => { active = false; };
-    }, [user?.id])); 
-    const signOut = () => Alert.alert('Terminar sessão?', 'Podes voltar a entrar quando quiseres.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Sair', style: 'destructive', onPress: async () => { try { await logout(); } catch { Alert.alert('Não foi possível terminar sessão', 'Confirma a ligação e tenta novamente para desligar esta conta do dispositivo.'); } } }]); 
-    
-    const enableNotifications = async () => {
+    }, [user?.id]));
+
+    useFocusEffect(useCallback(() => {
+        let active = true;
+        const refreshPermission = async () => {
+            try {
+                const notifications = getNotifications();
+                const permission = await notifications?.getPermissionsAsync();
+                if (active) setNotificationsEnabled(Boolean(permission?.granted));
+            } catch {
+                // Keep the last known permission if the native query fails.
+            } finally {
+                if (active) setCheckingNotifications(false);
+            }
+        };
+        setCheckingNotifications(true);
+        refreshPermission();
+        const listener = AppState.addEventListener('change', state => {
+            if (state === 'active') refreshPermission();
+        });
+        return () => { active = false; listener.remove(); };
+    }, []));
+
+    const openSettings = async () => {
+        try { await Linking.openSettings(); }
+        catch { Alert.alert('Não foi possível abrir as definições', 'Abre as definições do dispositivo e seleciona a Figo.'); }
+    };
+
+    const signOut = () => Alert.alert('Terminar sessão?', 'Podes voltar a entrar quando quiseres.', [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+            text: 'Sair', style: 'destructive', onPress: async () => {
+                try { await logout(); }
+                catch { Alert.alert('Não foi possível terminar sessão', 'Confirma a ligação e tenta novamente para desligar esta conta do dispositivo.'); }
+            },
+        },
+    ]);
+
+    const changeNotifications = async enabled => {
+        if (checkingNotifications || updatingNotifications) return;
+        if (!enabled) {
+            // OS permission is the source of truth; a local toggle would be
+            // overwritten by the existing registration on app foreground.
+            Alert.alert('Desativar notificações', 'Podes desativar as notificações da Figo nas definições do dispositivo.', [
+                { text: 'Cancelar', style: 'cancel' },
+                { text: 'Abrir definições', onPress: openSettings },
+            ]);
+            return;
+        }
+        setUpdatingNotifications(true);
         try {
             const status = await registerPushNotifications({ requestPermission: true });
-            if (status === 'registered') Alert.alert('Notificações ativas', 'Vais receber avisos de novas mensagens neste dispositivo.');
-            else if (status === 'denied') Alert.alert('Permissão necessária', 'Ativa as notificações nas definições do dispositivo.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Abrir definições', onPress: () => Linking.openSettings() }]);
-            else Alert.alert('Nova build necessária', 'As notificações precisam de uma build com suporte nativo. Não estão disponíveis nesta execução.');
-        } catch { Alert.alert('Não foi possível ativar', 'Confirma a ligação e a configuração de notificações desta build e tenta novamente.'); }
+            if (status === 'registered') setNotificationsEnabled(true);
+            else if (status === 'denied') {
+                setNotificationsEnabled(false);
+                Alert.alert('Permissão necessária', 'Ativa as notificações nas definições do dispositivo.', [
+                    { text: 'Cancelar', style: 'cancel' },
+                    { text: 'Abrir definições', onPress: openSettings },
+                ]);
+            } else if (status === 'unavailable') {
+                Alert.alert('Notificações indisponíveis', 'As notificações não estão disponíveis nesta execução da aplicação.');
+            }
+        } catch {
+            Alert.alert('Não foi possível ativar', 'Confirma a ligação e tenta novamente.');
+        } finally { setUpdatingNotifications(false); }
     };
+
     return <Screen scroll contentContainerStyle={styles.page}>
-        <View style={styles.profile}><ProfileAvatar uri={user.avatar} name={user.name} size={88} />
-        <Text style={styles.name}>{user.name}</Text><Text style={styles.email}>{user.email}</Text>
-        <Text style={styles.location}>📍 {locationLabel(profileLocation(user.location))}</Text>
-        </View>
-        <View style={styles.stat}>
-            <Text style={styles.statNumber}>{mine ?? '—'}</Text>
-            <Text style={styles.statLabel}>Os meus anúncios</Text>
+        <View style={styles.hero}>
+            <View pointerEvents="none" accessible={false} style={styles.heroBackdrop}>
+                <View style={styles.heroTint} />
+                <View style={[styles.heroCurve, {
+                    width: heroWidth * 1.6,
+                    height: heroWidth * 1.2,
+                    borderRadius: heroWidth,
+                    top: -heroWidth * 0.7,
+                    left: -heroWidth * 0.3,
+                }]} />
             </View>
-            <MenuItem 
-            icon="create-outline" 
-            label="Editar perfil" 
-            onPress={() => navigation.navigate('EditProfile')} 
-            />
-            <MenuItem 
-            icon="leaf-outline" 
-            label="Os meus anúncios" 
-            detail={mine == null ? '—' : `${mine}`} onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS)} 
+            <View style={styles.header}>
+                <Text accessibilityRole="header" style={styles.title}>Perfil</Text>
+            </View>
+            <View pointerEvents="box-none" style={[styles.profile, fontScale > 1.15 && styles.profileLargeText]}>
+                <View style={styles.avatarFrame}>
+                    <ProfileAvatar uri={user.avatar} name={user.name} size={88} />
+                </View>
+                <Text style={styles.name}>{user.name}</Text>
+                <Text style={styles.email}>{user.email}</Text>
+                <View style={styles.location}>
+                    <Ionicons accessible={false} name="location-sharp" size={16} color="#D95151" />
+                    <Text style={styles.locationText}>{locationLabel(profileLocation(user.location))}</Text>
+                </View>
+            </View>
+        </View>
+
+        <View style={styles.stats}>
+            <View pointerEvents="none" style={[styles.statDecoration, styles.statDecorationLeft]} />
+            <View pointerEvents="none" style={[styles.statDecoration, styles.statDecorationRight]} />
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Os meus anúncios: ${mine ?? 'a carregar'}`}
+                onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS)}
+                style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
+            >
+                <Text style={styles.statNumber}>{mine ?? '—'}</Text>
+                <Text style={styles.statLabel}>Os meus anúncios</Text>
+            </Pressable>
+            <View style={styles.statDivider} />
+            <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Favoritos: ${favoriteIds.length}`}
+                onPress={() => navigation.navigate(ROUTES.FAVORITES)}
+                style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
+            >
+                <View style={styles.statValue}>
+                    <Ionicons name="heart-outline" size={26} color={colors.primaryDarkFigo} />
+                    <Text style={styles.statNumber}>{favoriteIds.length}</Text>
+                </View>
+                <Text style={styles.statLabel}>Favoritos</Text>
+            </Pressable>
+        </View>
+
+        <View style={styles.menu}>
+            <MenuItem icon="create-outline" label="Editar perfil" description="Atualiza os teus dados e fotografia" onPress={editProfile} />
+            <MenuItem
+                icon="leaf-outline" label="Os meus anúncios" description="Consulta e gere os teus anúncios"
+                detail={mine ?? '—'} onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS)}
             />
             <MenuItem
-            icon="heart-outline"
-            label="Os meus favoritos"
-            detail={`${favoriteIds.length}`}
-            onPress={() => navigation.navigate(ROUTES.FAVORITES)}
+                icon="heart-outline" label="Os meus favoritos" description="Guarda os anúncios de que mais gostas"
+                detail={favoriteIds.length} onPress={() => navigation.navigate(ROUTES.FAVORITES)}
             />
-            <MenuItem 
-            icon="basket-outline" 
-            label="As minhas encomendas" 
-            onPress={() => navigation.navigate('Orders')} 
+            <MenuItem
+                icon="basket-outline" label="As minhas encomendas" description="Acompanha as tuas compras e vendas"
+                onPress={() => navigation.navigate(ROUTES.ORDERS)}
             />
-            <MenuItem icon="document-text-outline" label="Informação legal" onPress={() => navigation.navigate(ROUTES.LEGAL_INFO)} />
-            <MenuItem icon="notifications-outline" label="Ativar notificações" onPress={enableNotifications} />
-            <Button 
-            title="Terminar sessão" 
-            variant="secondary" 
-            onPress={signOut}
+            <MenuItem
+                icon="document-text-outline" label="Informação legal" description="Termos, privacidade e regras"
+                onPress={() => navigation.navigate(ROUTES.LEGAL_INFO)}
             />
-            </Screen>
-            ; 
-        }
+            <View style={styles.item}>
+                <MenuIcon name="notifications-outline" />
+                <View style={styles.itemCopy}>
+                    <Text style={styles.itemLabel}>Ativar notificações</Text>
+                    <Text style={styles.itemDescription}>Recebe avisos de novas mensagens</Text>
+                </View>
+                <Switch
+                    accessibilityLabel="Ativar notificações"
+                    accessibilityHint="Para desativar, abre as definições do dispositivo."
+                    accessibilityState={{ busy: checkingNotifications || updatingNotifications }}
+                    value={notificationsEnabled}
+                    disabled={checkingNotifications || updatingNotifications}
+                    onValueChange={changeNotifications}
+                    trackColor={{ false: '#D9D5DE', true: colors.primaryDarkFigo }}
+                    thumbColor={colors.surface}
+                    ios_backgroundColor="#D9D5DE"
+                    style={styles.notificationSwitch}
+                />
+            </View>
+        </View>
+        <Button title="Terminar sessão" icon="log-out-outline" variant="secondary" onPress={signOut} style={styles.logout} />
+    </Screen>;
+}
 
-function MenuItem({ icon, label, detail, onPress }) { 
-    return <Pressable onPress={onPress} style={styles.item}>
-        <Ionicons 
-        name={icon} 
-        size={22} 
-        color={colors.primaryFigo} 
-        />
-        <Text 
-        style={styles.itemLabel}
-        >
-            {label}
-            </Text>
-            {detail ? <Text style={styles.detail}>{detail}</Text> 
-            : 
-            null}
-            <Ionicons 
-            name="chevron-forward" 
-            size={19} 
-            color={colors.textMuted} 
-            />
-            </Pressable>
-            ; 
-        }
+function MenuIcon({ name }) {
+    return <View accessible={false} style={styles.itemIcon}>
+        <Ionicons name={name} size={26} color={colors.primaryDarkFigo} />
+    </View>;
+}
 
-const styles = StyleSheet.create({ 
-    page: { gap: spacing.md, paddingTop: spacing.lg }, 
-    profile: { alignItems: 'center', gap: 5 }, 
-    name: { color: colors.text, fontSize: 24, fontWeight: '800' }, 
-    email: { color: colors.textMuted }, 
-    location: { color: colors.primaryDarkFigo }, 
-    stat: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.cream, alignItems: 'center' }, 
-    statNumber: { color: colors.primaryDarkFigo, fontSize: 23, fontWeight: '800' }, 
-    statLabel: { color: colors.textMuted }, 
-    item: { minHeight: 56, paddingHorizontal: spacing.md, borderRadius: 14, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: spacing.md }, 
-    itemLabel: { flex: 1, color: colors.text, fontWeight: '600' }, detail: { color: colors.textMuted } 
+function MenuItem({ icon, label, description, detail, onPress }) {
+    return <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={`${label}${detail != null ? `: ${detail}` : ''}`}
+        accessibilityHint={description}
+        onPress={onPress}
+        style={({ pressed }) => [styles.item, pressed && styles.pressed]}
+    >
+        <MenuIcon name={icon} />
+        <View style={styles.itemCopy}>
+            <Text style={styles.itemLabel}>{label}</Text>
+            <Text style={styles.itemDescription}>{description}</Text>
+        </View>
+        {detail != null ? <View style={styles.detailBadge}><Text style={styles.detail}>{detail}</Text></View> : null}
+        <Ionicons name="chevron-forward" size={18} color={profileColors.muted} />
+    </Pressable>;
+}
+
+const styles = StyleSheet.create({
+    page: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingTop: 4, gap: 12 },
+    hero: { marginHorizontal: -spacing.md, paddingHorizontal: spacing.md, paddingBottom: 2 },
+    heroBackdrop: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
+    heroTint: { ...StyleSheet.absoluteFillObject, top: 40, backgroundColor: '#F5EFF7' },
+    heroCurve: { position: 'absolute', backgroundColor: colors.background },
+    header: { minHeight: 44, flexDirection: 'row', alignItems: 'center' },
+    title: { color: profileColors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.6, paddingLeft: 4 },
+    profile: { alignItems: 'center', paddingHorizontal: spacing.lg, marginTop: -28 },
+    profileLargeText: { marginTop: 0 },
+    avatarFrame: {
+        padding: 3, borderRadius: 50, backgroundColor: colors.surface, marginBottom: 7,
+        shadowColor: '#49394D', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1, shadowRadius: 5, elevation: 2,
+    },
+    name: { color: profileColors.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, textAlign: 'center' },
+    email: { color: profileColors.muted, fontSize: 14, textAlign: 'center', marginTop: 3 },
+    location: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 5 },
+    locationText: { color: colors.primaryDarkFigo, fontSize: 14, flexShrink: 1, textAlign: 'center' },
+    stats: { flexDirection: 'row', alignItems: 'center', backgroundColor: profileColors.lavender, borderRadius: 18, overflow: 'hidden', marginBottom: 2 },
+    stat: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 10, gap: 1, minHeight: 68 },
+    statValue: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+    statNumber: { color: colors.primaryDarkFigo, fontSize: 27, lineHeight: 31, fontWeight: '700' },
+    statLabel: { color: profileColors.muted, fontSize: 13, textAlign: 'center' },
+    statDivider: { width: 1, height: 35, backgroundColor: '#DDD2E4' },
+    statDecoration: { position: 'absolute', width: 100, height: 120, backgroundColor: '#F5EFF8', transform: [{ rotate: '-40deg' }] },
+    statDecorationLeft: { left: -64, top: -46 },
+    statDecorationRight: { right: -62, bottom: -58 },
+    menu: { gap: 8 },
+    item: { minHeight: 60, padding: 8, paddingRight: 12, borderRadius: 16, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 11 },
+    itemIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: profileColors.iconBackground, alignItems: 'center', justifyContent: 'center' },
+    itemCopy: { flex: 1, minWidth: 0, gap: 3 },
+    itemLabel: { color: profileColors.text, fontSize: 15, fontWeight: '600' },
+    itemDescription: { color: profileColors.muted, fontSize: 12, lineHeight: 16 },
+    detailBadge: { minWidth: 30, minHeight: 29, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: profileColors.iconBackground },
+    detail: { color: colors.primaryDarkFigo, fontSize: 13, fontWeight: '600' },
+    notificationSwitch: { marginLeft: 1 },
+    logout: { minHeight: 48, borderRadius: 14, borderWidth: 1.5, marginTop: 1 },
+    pressed: { opacity: 0.7 },
 });

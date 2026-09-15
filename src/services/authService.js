@@ -1,3 +1,5 @@
+import { requestAccountClosure } from '../utils/accountClosure';
+import { accountClosureStorage } from '../storage/accountClosureStorage';
 import { File as ExpoFile } from 'expo-file-system';
 import { unregisterPushNotifications } from './pushNotifications';
 import { api } from './api';
@@ -12,6 +14,9 @@ const normalizeUser = (user) => user ? {
 const saveSession = async (session) => { await tokenStorage.save(session); return { ...session, user: normalizeUser(session.user) }; };
 
 export const authService = {
+  reactivate: async credentials => saveSession(await api.post('/auth/account/reactivate', { ...credentials, confirm: true })),
+  deletionStatus: receipt => api.post('/auth/account/deletion-status', { receipt }),
+  closeAccount: (mode, credentials) => requestAccountClosure(api, accountClosureStorage, mode, credentials),
   login: async (credentials) => saveSession(await api.post('/auth/login', credentials)),
   register: (data) => api.post('/auth/register', data),
   resendRegistrationOtp: ({ challengeId }) => api.post('/auth/resend-email-verification', { challengeId }),

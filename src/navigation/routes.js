@@ -1,4 +1,5 @@
 export const ROUTES = {
+    ACCOUNT_ACTION: 'AccountAction',
     LEGAL_DOCUMENT: 'LegalDocument',
     LEGAL_INFO: 'LegalInfo',
     WELCOME: 'Welcome', 

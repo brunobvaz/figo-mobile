@@ -1,3 +1,4 @@
+import useAuth from '../hooks/useAuth';
 import { mergeProductCache } from '../utils/productCache';
 import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
 import { productService } from '../services/productService';
@@ -5,6 +6,10 @@ import { normalizeText } from '../utils/helpers';
 import { formatLocation } from '../utils/formatters';
 export const ProductsContext = createContext(null);
 export function ProductsProvider({ children }) {
+  const { user } = useAuth();
+  return <AccountProductCache key={user?.id || 'anonymous'}>{children}</AccountProductCache>;
+}
+function AccountProductCache({ children }) {
   const [products, setProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const cacheProducts = useCallback(items => setProducts(current => mergeProductCache(current, items)), []);

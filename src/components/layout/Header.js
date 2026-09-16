@@ -10,11 +10,12 @@ export default function Header({
     location,
     onLocationPress,
     right,
+    titleStyle,
     style
 }) {
     return <View style={[styles.header, style]}>
         <View style={styles.copy}>
-            <Text style={styles.title}>{title}</Text>
+            <Text accessibilityRole="header" style={[styles.title, titleStyle]}>{title}</Text>
             {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
 
             {location ?
@@ -52,26 +53,27 @@ const styles = StyleSheet.create({
         flex: 1
     },
     title: {
-        color: colors.text,
-        fontSize: typography.sizes.title,
+        color: colors.primaryDarkFigo,
+        fontSize: typography.sizes.screenTitle,
         fontWeight: typography.weights.bold
     },
     subtitle: {
         marginTop: spacing.xs,
         color: colors.textMuted,
-        fontSize: typography.sizes.caption
+        fontSize: 14
     },
     location: {
         alignSelf: 'flex-start',
+        minHeight: 44,
         flexDirection: 'row',
         alignItems: 'center',
         gap: spacing.xs,
         marginTop: spacing.sm
     },
     locationText: {
-        maxWidth: '85%',
+        flexShrink: 1,
         color: colors.text,
-        fontSize: typography.sizes.caption,
+        fontSize: 14,
         fontWeight: typography.weights.medium
     },
     right: {

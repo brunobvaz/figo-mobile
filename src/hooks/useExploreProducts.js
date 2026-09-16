@@ -33,7 +33,9 @@ export default function useExploreProducts(filters, coordinates, region, enabled
     if (!enabled) return;
     const id = ++generation.current;
     inFlight.current = false;
-    setState({ key: requestKey, items: [], pagination: null, busy: true, error: '' });
+    setState(current => current.key === requestKey
+      ? { ...current, busy: true, error: '' }
+      : { key: requestKey, items: [], pagination: null, busy: true, error: '' });
     const search = JSON.parse(requestKey).search;
     const delay = previousSearch.current !== undefined && search !== previousSearch.current ? 300 : 0;
     previousSearch.current = search || '';

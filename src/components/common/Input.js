@@ -8,6 +8,7 @@ export default function Input({ label, error, style, leadingIcon, ...props }) {
         {label ? <Text style={styles.label}>{label}</Text> : null}
         <View>
         <TextInput
+            accessibilityLabel={label}
             placeholderTextColor={colors.textMuted}
             style={[styles.input, leadingIcon && styles.withIcon, error && styles.inputError, props.multiline && styles.multiline]} {...props}
         />
@@ -15,16 +16,16 @@ export default function Input({ label, error, style, leadingIcon, ...props }) {
             <Ionicons name={leadingIcon} size={20} color={colors.textMuted} />
         </View> : null}
         </View>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
+        {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
     </View>;
 }
 
 const styles = StyleSheet.create({
     wrapper: { gap: spacing.xs },
-    label: { color: colors.text, fontWeight: '600' },
+    label: { color: colors.text, fontSize: 15, fontWeight: '600' },
     withIcon: { paddingLeft: 46 },
     icon: { position: 'absolute', left: spacing.md, top: 0, bottom: 0, justifyContent: 'center' },
-    input: { minHeight: 50, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, color: colors.text },
+    input: { minHeight: 52, fontSize: 16, paddingVertical: 12, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: 14, backgroundColor: colors.surface, color: colors.text },
     multiline: { minHeight: 110, paddingTop: spacing.md, textAlignVertical: 'top' },
-    inputError: { borderColor: colors.error }, error: { color: colors.error, fontSize: 12 }
+    inputError: { borderColor: colors.error }, error: { color: colors.error, fontSize: 13 }
 });

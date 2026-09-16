@@ -50,13 +50,15 @@ export default function Chip({
 const styles = StyleSheet.create({
     withIcon: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
     chip: {
+        minHeight: 44,
+        justifyContent: 'center',
         paddingHorizontal: spacing.md,
         paddingVertical: 10,
         borderRadius: 20,
-        backgroundColor: colors.cream
+        backgroundColor: colors.surface
     },
     selected: {
-        backgroundColor: colors.primaryFigo
+        backgroundColor: colors.primaryDarkFigo
     },
     outlined: {
         paddingHorizontal: 12,
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
     },
     text: {
         color: colors.text,
-        fontSize: typography.sizes.body
+        fontSize: 14
     },
     selectedText: {
         color: colors.surface,

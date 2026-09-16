@@ -1,5 +1,5 @@
 import LoadingScreen from '../../components/common/LoadingScreen';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
@@ -19,6 +19,10 @@ import { useChat } from '../../context/ChatContext';
 import { chatService } from '../../services/chatService';
 import { createId } from '../../utils/helpers';
 import { mergeMessages, redactRemovedParticipant } from '../../utils/chatMessages';
+import { activeTransactionStatuses, mergeTransactions, purchaseTimeline, reputationLabel } from '../../utils/chatTransactions';
+import useChatPurchase from '../../hooks/useChatPurchase';
+import TransactionCard from '../../components/chat/TransactionCard';
+import PurchaseSheet from '../../components/chat/PurchaseSheet';
 
 export default function ChatScreen({ route, navigation }) {
   const { conversationId: initialId, productId, productTitle } = route.params || {};
@@ -34,6 +38,8 @@ export default function ChatScreen({ route, navigation }) {
   const [availability, setAvailability] = useState({ canSend: false });
   const availabilityRef = useRef({ canSend: false });
   const [messages, setMessages] = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [expandedPurchases, setExpandedPurchases] = useState({});
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
@@ -68,6 +74,7 @@ export default function ChatScreen({ route, navigation }) {
     if (['deleted', 'deletion_pending'].includes(availabilityRef.current.participant?.status) && !['deleted', 'deletion_pending'].includes(page.participant?.status)) return;
     availabilityRef.current = page;
     setAvailability(page);
+    setTransactions(current => mergeTransactions(current, page.transactions || []));
     if (page.participant?.name) navigation.setOptions({ title: page.participant.name });
     if (['deleted', 'deletion_pending'].includes(page.participant?.status)) {
       // Include older pages already in memory, not only this poll's recent page.
@@ -75,6 +82,22 @@ export default function ChatScreen({ route, navigation }) {
       setMessages(rows.current);
     }
   }, [navigation]);
+
+  const purchase = useChatPurchase({ conversationId: id, userId: user.id, transactions,
+    onSaved: saved => { setTransactions(current => mergeTransactions(current, [saved])); scrollToLatest(); refresh(); },
+    onRefresh: () => { setAttempt(value => value + 1); refresh(); } });
+  const timeline = useMemo(() => purchaseTimeline(messages, transactions, Boolean(cursor)).reverse(), [messages, transactions, cursor]);
+  const buyerName = availability.buyerId === user.id ? user.name : availability.participant?.name || 'o comprador';
+  const sellerName = availability.sellerId === user.id ? user.name : availability.participant?.name || 'o vendedor';
+  const canPropose = availability.canPropose && !transactions.some(item => activeTransactionStatuses.includes(item.status));
+  const repeatPurchase = canPropose && availability.canSend
+    ? timeline.find(item => item.kind === 'transaction' && item.isLatest && item.transaction.status === 'reviewed' && item.transaction.buyerId === user.id)
+    : null;
+  const togglePurchase = purchaseId => {
+    // Opening an older card must not jump back to the newest message.
+    nearLatest.current = false;
+    setExpandedPurchases(current => ({ ...current, [purchaseId]: !current[purchaseId] }));
+  };
 
   useEffect(() => {
     alive.current = true;
@@ -125,7 +148,7 @@ export default function ChatScreen({ route, navigation }) {
 
   const acknowledgeVisible = useCallback(async () => {
     if (!id || !active.current) return;
-    const ids = visible.current.filter((item) => item.senderId !== user.id && !item.readAt && !item.status && !readPending.current.has(item.id) && !acknowledged.current.has(item.id)).map((item) => item.id).slice(0, 100);
+    const ids = visible.current.filter((item) => item.kind !== 'transaction' && item.senderId !== user.id && !item.readAt && !item.status && !readPending.current.has(item.id) && !acknowledged.current.has(item.id)).map((item) => item.id).slice(0, 100);
     if (!ids.length) return;
     ids.forEach((key) => readPending.current.add(key));
     try {
@@ -181,11 +204,14 @@ export default function ChatScreen({ route, navigation }) {
   // Android already resizes the window (softwareKeyboardLayoutMode: resize).
   // On iOS resize the whole conversation, including the composer, below the native header.
   return <LoadingScreen loading={focused && (loading || contextProduct.loading)} message="A carregar conversa…"><KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={headerHeight} style={styles.keyboard}>
-    <Screen contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
+    <Screen safeAreaEdges={['left', 'right']} contentContainerStyle={[styles.page, { paddingBottom: Math.max(spacing.sm, insets.bottom) }]}>
       <ProductContextCard product={availability.participant?.status && availability.participant.status !== 'active' ? null : contextProduct.product} title={availability.productTitle || contextProduct.title} loading={contextProduct.loading}
         onPress={() => navigation.push(ROUTES.PRODUCT_DETAILS, { productId: contextProduct.productId })} />
+      {canPropose && !repeatPurchase ? <Button title="Propor compra" loading={purchase.busy === 'prepare'} disabled={Boolean(purchase.busy) || loading || !availability.canSend} onPress={() => purchase.openProposal()} /> : null}
+      {availability.buyerId === user.id && availability.sellerReputation ? <Text style={styles.reputation}>{sellerName} · {reputationLabel(availability.sellerReputation)}</Text> : null}
+      {purchase.error && !purchase.sheet ? <Text accessibilityRole="alert" style={styles.error}>{purchase.error}</Text> : null}
       {error ? <View><Text accessibilityRole="alert" style={styles.error}>{error}</Text><Button title="Tentar novamente" variant="secondary" onPress={() => setAttempt((value) => value + 1)} /></View> : null}
-      <FlatList ref={list} inverted data={[...messages].reverse()} keyExtractor={(item) => `${item.senderId}:${item.clientId}`}
+      <FlatList ref={list} inverted data={timeline} keyExtractor={(item) => item.kind === 'transaction' ? item.id : `${item.senderId}:${item.clientId}`}
         style={styles.list}
         contentContainerStyle={styles.messages} keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag" automaticallyAdjustKeyboardInsets={false}
@@ -194,7 +220,11 @@ export default function ChatScreen({ route, navigation }) {
         onViewableItemsChanged={onViewableItemsChanged} viewabilityConfig={viewabilityConfig}
         ListEmptyComponent={<Text style={sharedStyles.helperNote}>{loading ? 'A carregar mensagens…' : availability.canSend ? 'Ainda não existem mensagens. Escreve para iniciar a conversa.' : 'Ainda não existem mensagens.'}</Text>}
         ListFooterComponent={cursor ? <Button title="Mensagens anteriores" variant="secondary" loading={loadingOlder} onPress={loadOlder} /> : null}
-        renderItem={({ item }) => <View>
+        renderItem={({ item }) => item.kind === 'transaction'
+          ? <TransactionCard event={item} userId={user.id} buyerName={buyerName} sellerName={sellerName} busy={purchase.busy}
+            canInteract={availability.canSend} onAction={purchase.onAction}
+            expanded={Boolean(expandedPurchases[item.transaction.id])} onToggle={() => togglePurchase(item.transaction.id)}
+            canRepeat={repeatPurchase?.id === item.id} onRepeat={purchase.openProposal} /> : <View>
           <MessageBubble message={item.text} own={item.senderId === user.id} />
           <Text style={styles.time}>{new Date(item.createdAt).toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' })}{item.status === 'sending' ? ' · A enviar…' : ''}</Text>
           {item.status === 'failed' ? <Button title="Reenviar mensagem" variant="secondary" disabled={sending || !availability.canSend} onPress={() => send(item)} /> : null}
@@ -205,6 +235,8 @@ export default function ChatScreen({ route, navigation }) {
         <Button title="Enviar" loading={sending} disabled={!id || !message.trim() || sending} onPress={() => send()} style={styles.sendButton} />
       </View> : <Text accessibilityRole="alert" style={sharedStyles.helperNote}>{availability.unavailableReason || 'A confirmar a disponibilidade da conversa…'}</Text>}
     </Screen>
+    <PurchaseSheet sheet={purchase.sheet} sellerName={sellerName} busy={Boolean(purchase.busy)} error={purchase.error}
+      onChange={purchase.change} onClose={purchase.close} onSubmit={purchase.submit} />
   </KeyboardAvoidingView></LoadingScreen>;
 }
 const styles = StyleSheet.create({
@@ -214,5 +246,6 @@ const styles = StyleSheet.create({
   messages: { flexGrow: 1, gap: spacing.sm, paddingVertical: spacing.sm },
   composer: { flexDirection: 'row', alignItems: 'flex-end', gap: spacing.sm },
   messageInput: { flex: 1 }, sendButton: { paddingHorizontal: spacing.md },
-  time: { fontSize: 11, color: colors.textMuted, marginTop: 3 }, error: { color: colors.error }
+  time: { fontSize: 11, color: colors.textMuted, marginTop: 3 }, error: { color: colors.error },
+  reputation: { color: colors.primaryDarkFigo, fontSize: 12 }
 });

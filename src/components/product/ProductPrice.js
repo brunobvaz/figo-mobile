@@ -16,8 +16,8 @@ export default function ProductPrice({ price, unit, large = false, small = false
 
 const styles = StyleSheet.create({
   price: { color: colors.primaryDarkFigo, fontSize: 20, fontWeight: '800' },
-  small: { fontSize: 16, lineHeight: 20 },
-  smallUnit: { fontSize: 12 },
+  small: { fontSize: 18, lineHeight: 25 },
+  smallUnit: { fontSize: 13 },
   large: { fontSize: 32 },
   unit: { color: colors.textMuted, fontSize: 14, fontWeight: '500' },
   largeUnit: { fontSize: 18 },

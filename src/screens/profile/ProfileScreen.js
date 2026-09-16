@@ -4,21 +4,24 @@ import { Alert, AppState, Linking, Pressable, StyleSheet, Switch, Text, useWindo
 import { Ionicons } from '@expo/vector-icons';
 import ProfileAvatar from '../../components/common/ProfileAvatar';
 import Button from '../../components/common/Button';
+import ReviewsSheet from '../../components/reviews/ReviewsSheet';
+import ProfileReputationCard from '../../components/profile/ProfileReputationCard';
 import Screen from '../../components/layout/Screen';
 import useAuth from '../../hooks/useAuth';
 import useFavorites from '../../hooks/useFavorites';
 import { ROUTES } from '../../navigation/routes';
 import { productService } from '../../services/productService';
+import { orderService } from '../../services/orderService';
 import { getNotifications, registerPushNotifications } from '../../services/pushNotifications';
 import { locationLabel, profileLocation } from '../../utils/activeLocation';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
+import sharedStyles from '../../theme/SharedStyles';
 
 const profileColors = {
-    text: '#15151C',
-    muted: '#7B8088',
-    lavender: '#F1EAF5',
-    iconBackground: '#F7F1FB',
+    text: colors.text,
+    muted: colors.textMuted,
+    iconBackground: colors.surfaceSoft,
 };
 
 export default function ProfileScreen({ navigation }) {
@@ -27,6 +30,9 @@ export default function ProfileScreen({ navigation }) {
     const { width, fontScale } = useWindowDimensions();
     const heroWidth = Math.min(width, 560);
     const [mine, setMine] = useState(null);
+    const [commerce, setCommerce] = useState(null);
+    const [commerceError, setCommerceError] = useState(null);
+    const [reviewsOpen, setReviewsOpen] = useState(false);
     const [notificationsEnabled, setNotificationsEnabled] = useState(false);
     const [checkingNotifications, setCheckingNotifications] = useState(true);
     const [updatingNotifications, setUpdatingNotifications] = useState(false);
@@ -34,11 +40,12 @@ export default function ProfileScreen({ navigation }) {
 
     useFocusEffect(useCallback(() => {
         let active = true;
-        setMine(null);
+        setCommerceError(null);
+        orderService.summary().then(result => { if (active) setCommerce(result); }).catch(() => { if (active) setCommerceError('Não foi possível atualizar as compras, vendas e avaliações.'); });
         if (user?.id) productService.page({ sellerId: user.id, limit: 1 }).then(result => {
             if (active) setMine(result.pagination.total);
         }).catch(() => {});
-        return () => { active = false; };
+        return () => { active = false; setReviewsOpen(false); };
     }, [user?.id]));
 
     useFocusEffect(useCallback(() => {
@@ -107,6 +114,8 @@ export default function ProfileScreen({ navigation }) {
     };
 
     return <Screen scroll contentContainerStyle={styles.page}>
+        {reviewsOpen ? <ReviewsSheet key={user.id} sellerId={user.id} sellerName={user.name} onClose={() => setReviewsOpen(false)}
+            onOpenProfile={authorId => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: authorId })} /> : null}
         <View style={styles.hero}>
             <View pointerEvents="none" accessible={false} style={styles.heroBackdrop}>
                 <View style={styles.heroTint} />
@@ -119,13 +128,14 @@ export default function ProfileScreen({ navigation }) {
                 }]} />
             </View>
             <View style={styles.header}>
-                <Text accessibilityRole="header" style={styles.title}>Perfil</Text>
+                <Text accessibilityRole="header" style={[sharedStyles.screenTitle, styles.title]}>Perfil</Text>
             </View>
             <View pointerEvents="box-none" style={[styles.profile, fontScale > 1.15 && styles.profileLargeText]}>
                 <View style={styles.avatarFrame}>
                     <ProfileAvatar uri={user.avatar} name={user.name} size={88} />
                 </View>
                 <Text style={styles.name}>{user.name}</Text>
+                {commerce ? <ProfileReputationCard reputation={commerce.reputation} onPress={() => setReviewsOpen(true)} /> : null}
                 <Text style={styles.email}>{user.email}</Text>
                 <View style={styles.location}>
                     <Ionicons accessible={false} name="location-sharp" size={16} color="#D95151" />
@@ -134,33 +144,7 @@ export default function ProfileScreen({ navigation }) {
             </View>
         </View>
 
-        <View style={styles.stats}>
-            <View pointerEvents="none" style={[styles.statDecoration, styles.statDecorationLeft]} />
-            <View pointerEvents="none" style={[styles.statDecoration, styles.statDecorationRight]} />
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Os meus anúncios: ${mine ?? 'a carregar'}`}
-                onPress={() => navigation.navigate(ROUTES.MY_PRODUCTS)}
-                style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
-            >
-                <Text style={styles.statNumber}>{mine ?? '—'}</Text>
-                <Text style={styles.statLabel}>Os meus anúncios</Text>
-            </Pressable>
-            <View style={styles.statDivider} />
-            <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Favoritos: ${favoriteIds.length}`}
-                onPress={() => navigation.navigate(ROUTES.FAVORITES)}
-                style={({ pressed }) => [styles.stat, pressed && styles.pressed]}
-            >
-                <View style={styles.statValue}>
-                    <Ionicons name="heart-outline" size={26} color={colors.primaryDarkFigo} />
-                    <Text style={styles.statNumber}>{favoriteIds.length}</Text>
-                </View>
-                <Text style={styles.statLabel}>Favoritos</Text>
-            </Pressable>
-        </View>
-
+        {commerceError ? <Text accessibilityRole="alert" style={styles.commerceError}>{commerceError}</Text> : null}
         <View style={styles.menu}>
             <MenuItem icon="create-outline" label="Editar perfil" description="Atualiza os teus dados e fotografia" onPress={editProfile} />
             <MenuItem
@@ -172,8 +156,14 @@ export default function ProfileScreen({ navigation }) {
                 detail={favoriteIds.length} onPress={() => navigation.navigate(ROUTES.FAVORITES)}
             />
             <MenuItem
-                icon="basket-outline" label="As minhas encomendas" description="Acompanha as tuas compras e vendas"
-                onPress={() => navigation.navigate(ROUTES.ORDERS)}
+                icon="basket-outline" label="As minhas encomendas" description="Acompanha as tuas compras no chat"
+                detail={commerce ? `${commerce.ordersCount} ${commerce.ordersCount === 1 ? 'finalizada' : 'finalizadas'}` : '—'}
+                onPress={() => navigation.navigate(ROUTES.ORDERS, { role: 'buyer' })}
+            />
+            <MenuItem
+                icon="storefront-outline" label="As minhas vendas" description="Acompanha as tuas vendas no chat"
+                detail={commerce ? `${commerce.salesCount} ${commerce.salesCount === 1 ? 'finalizada' : 'finalizadas'}` : '—'}
+                onPress={() => navigation.navigate(ROUTES.ORDERS, { role: 'seller' })}
             />
             <MenuItem
                 icon="document-text-outline" label="Informação legal" description="Termos, privacidade e regras"
@@ -228,13 +218,13 @@ function MenuItem({ icon, label, description, detail, onPress }) {
 }
 
 const styles = StyleSheet.create({
-    page: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingTop: 4, gap: 12 },
+    page: { width: '100%', maxWidth: 560, alignSelf: 'center', paddingTop: spacing.md, gap: 16 },
     hero: { marginHorizontal: -spacing.md, paddingHorizontal: spacing.md, paddingBottom: 2 },
     heroBackdrop: { ...StyleSheet.absoluteFillObject, overflow: 'hidden' },
     heroTint: { ...StyleSheet.absoluteFillObject, top: 40, backgroundColor: '#F5EFF7' },
     heroCurve: { position: 'absolute', backgroundColor: colors.background },
     header: { minHeight: 44, flexDirection: 'row', alignItems: 'center' },
-    title: { color: profileColors.text, fontSize: 28, fontWeight: '800', letterSpacing: -0.6, paddingLeft: 4 },
+    title: { paddingLeft: 4 },
     profile: { alignItems: 'center', paddingHorizontal: spacing.lg, marginTop: -28 },
     profileLargeText: { marginTop: 0 },
     avatarFrame: {
@@ -243,25 +233,17 @@ const styles = StyleSheet.create({
     },
     name: { color: profileColors.text, fontSize: 24, fontWeight: '700', letterSpacing: -0.5, textAlign: 'center' },
     email: { color: profileColors.muted, fontSize: 14, textAlign: 'center', marginTop: 3 },
+    commerceError: { color: colors.error, fontSize: 13, textAlign: 'center' },
     location: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, marginTop: 5 },
     locationText: { color: colors.primaryDarkFigo, fontSize: 14, flexShrink: 1, textAlign: 'center' },
-    stats: { flexDirection: 'row', alignItems: 'center', backgroundColor: profileColors.lavender, borderRadius: 18, overflow: 'hidden', marginBottom: 2 },
-    stat: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 8, paddingVertical: 10, gap: 1, minHeight: 68 },
-    statValue: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
-    statNumber: { color: colors.primaryDarkFigo, fontSize: 27, lineHeight: 31, fontWeight: '700' },
-    statLabel: { color: profileColors.muted, fontSize: 13, textAlign: 'center' },
-    statDivider: { width: 1, height: 35, backgroundColor: '#DDD2E4' },
-    statDecoration: { position: 'absolute', width: 100, height: 120, backgroundColor: '#F5EFF8', transform: [{ rotate: '-40deg' }] },
-    statDecorationLeft: { left: -64, top: -46 },
-    statDecorationRight: { right: -62, bottom: -58 },
     menu: { gap: 8 },
     item: { minHeight: 60, padding: 8, paddingRight: 12, borderRadius: 16, backgroundColor: colors.surface, flexDirection: 'row', alignItems: 'center', gap: 11 },
     itemIcon: { width: 44, height: 44, borderRadius: 12, backgroundColor: profileColors.iconBackground, alignItems: 'center', justifyContent: 'center' },
     itemCopy: { flex: 1, minWidth: 0, gap: 3 },
     itemLabel: { color: profileColors.text, fontSize: 15, fontWeight: '600' },
-    itemDescription: { color: profileColors.muted, fontSize: 12, lineHeight: 16 },
-    detailBadge: { minWidth: 30, minHeight: 29, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: profileColors.iconBackground },
-    detail: { color: colors.primaryDarkFigo, fontSize: 13, fontWeight: '600' },
+    itemDescription: { color: profileColors.muted, fontSize: 13, lineHeight: 19 },
+    detailBadge: { flexShrink: 1, maxWidth: '38%', minWidth: 30, minHeight: 29, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: profileColors.iconBackground },
+    detail: { color: colors.primaryDarkFigo, fontSize: 13, fontWeight: '600', textAlign: 'center' },
     notificationSwitch: { marginLeft: 1 },
     logout: { minHeight: 48, borderRadius: 14, borderWidth: 1.5, marginTop: 1 },
     pressed: { opacity: 0.7 },

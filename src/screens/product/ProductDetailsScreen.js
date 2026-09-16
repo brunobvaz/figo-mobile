@@ -9,7 +9,7 @@ import ProductPhotoGallery from '../../components/product/ProductPhotoGallery';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Button from '../../components/common/Button';
-import Loading from '../../components/common/Loading';
+import ListSkeleton from '../../components/common/ListSkeleton';
 import Screen from '../../components/layout/Screen';
 import ProductPrice from '../../components/product/ProductPrice';
 import useFavorites from '../../hooks/useFavorites';
@@ -42,7 +42,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
         return () => { active = false; };
     }, [productId, user?.id, cacheProducts, retry]));
     const product = getProductById(productId);
-    if (loading) return <Loading />;
+    if (loading && !product) return <Screen><ListSkeleton product rows={2} label="A carregar produto" /></Screen>;
     if (error || !product) return <Screen><Text accessibilityRole="alert">{error || 'Produto não encontrado.'}</Text><Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} /></Screen>;
     const changeState = async changes => {
         if (savingRef.current) return;
@@ -85,7 +85,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
         productTitle: product.title
     });
 
-    return <Screen safeAreaEdges={[]} contentContainerStyle={styles.page}>
+    return <Screen maxWidth={800} safeAreaEdges={['left', 'right']} contentContainerStyle={styles.page}>
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: spacing.lg }} showsVerticalScrollIndicator={false}>
         <View>
         <ProductPhotoGallery key={`${product.id}:${product.imagesRevision}`} photos={product.images || []} title={product.title} />
@@ -98,7 +98,7 @@ export default function ProductDetailsScreen({ route, navigation }) {
             <View style={styles.statusRow}><Text style={[styles.status, product.status === 'sold' && styles.sold]}>{product.status === 'sold' ? 'Esgotado' : 'Disponível'}</Text>{isOwner ? <Text accessibilityLiveRegion="polite" style={[styles.status, product.is_active === false && styles.inactiveStatus]}>{product.is_active === false ? 'Anúncio inativo' : 'Anúncio ativo'}</Text> : null}{product.self_harvest && ['Frutas', 'Legumes'].includes(product.category) ? <Text style={[styles.status, styles.harvestBadge]}>Colher no local</Text> : null}</View>
             <ProductPrice price={product.price} unit={product.unit} large />
             <Text style={styles.heading}>Localização do produto</Text>
-            <Text style={styles.meta}>📍 {[product.address?.locality || product.address?.parish, product.address?.municipality].filter(Boolean).join(', ') || formatLocation(product.location)}</Text>
+            <Text style={styles.meta}><Ionicons accessible={false} name="location-outline" size={17} color={colors.textMuted} /> {[product.address?.locality || product.address?.parish, product.address?.municipality].filter(Boolean).join(', ') || formatLocation(product.location)}</Text>
             {product.locationSource === 'parish' ? <Text style={styles.meta}>Localização aproximada · Combina a recolha com o vendedor.</Text> : null}
             {product.self_harvest && ['Frutas', 'Legumes'].includes(product.category) ? <Text style={styles.meta}>Colheita no local: combina os detalhes com o vendedor.</Text> : null}
             <Text style={styles.heading}>Sobre este produto</Text>
@@ -167,11 +167,11 @@ const styles = StyleSheet.create({
     removeAction: { minHeight: 46, borderRadius: 12, backgroundColor: '#FDEBEC', borderWidth: 1, borderColor: '#EBA5AA', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
     removeText: { color: '#B4232D', fontWeight: '600' },
     body: { padding: spacing.md, gap: spacing.md },
-    category: { color: colors.primaryFigo, fontWeight: '700', textTransform: 'uppercase', fontSize: 12 },
+    category: { color: colors.primaryFigo, fontWeight: '700', textTransform: 'uppercase', fontSize: 13 },
     title: { color: colors.text, fontSize: 28, fontWeight: '800' },
-    meta: { color: colors.textMuted },
+    meta: { color: colors.textMuted, fontSize: 15, lineHeight: 22 },
     heading: { color: colors.text, fontSize: 17, fontWeight: '700' },
-    description: { color: colors.textMuted, lineHeight: 23 },
+    description: { color: colors.text, fontSize: 16, lineHeight: 24 },
     seasonality: { color: colors.primaryDark, fontWeight: '600', lineHeight: 23 },
     seller: { padding: spacing.md, borderRadius: 16, backgroundColor: colors.surface, gap: spacing.md },
     sellerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },

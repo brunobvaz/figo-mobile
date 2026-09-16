@@ -1,6 +1,6 @@
 import useAuth from '../hooks/useAuth';
 import { mergeProductCache } from '../utils/productCache';
-import { createContext, useCallback, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { productService } from '../services/productService';
 import { normalizeText } from '../utils/helpers';
 import { formatLocation } from '../utils/formatters';
@@ -11,15 +11,28 @@ export function ProductsProvider({ children }) {
 }
 function AccountProductCache({ children }) {
   const [products, setProducts] = useState([]);
+  // Keep the latest public listing separate from the detail/search cache, which
+  // may contain older seller snapshots or products no longer publicly listed.
+  const [homeProducts, setHomeProducts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshError, setRefreshError] = useState(null);
+  const pendingRefresh = useRef(null);
   const cacheProducts = useCallback(items => setProducts(current => mergeProductCache(current, items)), []);
-  useEffect(() => { productService.list().then(cacheProducts).catch(() => {}).finally(() => setIsLoading(false)); }, [cacheProducts]);
+  const refreshProducts = useCallback(() => {
+    if (pendingRefresh.current) return pendingRefresh.current;
+    setRefreshError(null);
+    pendingRefresh.current = productService.list().then(items => { cacheProducts(items); setHomeProducts(items); })
+      .catch(() => setRefreshError('Não foi possível atualizar os produtos e vendedores. Toca para tentar novamente.'))
+      .finally(() => { pendingRefresh.current = null; setIsLoading(false); });
+    return pendingRefresh.current;
+  }, [cacheProducts]);
+  useEffect(() => { refreshProducts(); }, [refreshProducts]);
   const getProductById = useCallback((id) => products.find((item) => item.id === id), [products]);
   const searchProducts = useCallback((query, category = 'Todos') => { const term = normalizeText(query); return products.filter((item) => item.is_active !== false && (category === 'Todos' || item.category === category) && (!term || normalizeText(`${item.title} ${item.description} ${formatLocation(item.location)} ${item.seller.name}`).includes(term))); }, [products]);
   const filterByCategory = useCallback((category) => products.filter((item) => item.is_active !== false && (category === 'Todos' || item.category === category)), [products]);
   const createProduct = useCallback(async (data, imageAsset) => { const item = await productService.create(data, imageAsset); setProducts((current) => [item, ...current]); return item; }, []);
   const updateProduct = useCallback(async (id, data, imageAsset) => { const item = await productService.update(id, data, imageAsset); setProducts((current) => mergeProductCache(current, [item])); return item; }, []);
   const removeProduct = useCallback(async (id) => { await productService.remove(id); setProducts((current) => current.filter((product) => product.id !== id)); }, []);
-  const value = useMemo(() => ({ products, cacheProducts, isLoading, getProductById, searchProducts, filterByCategory, createProduct, updateProduct, removeProduct }), [products, cacheProducts, isLoading, getProductById, searchProducts, filterByCategory, createProduct, updateProduct, removeProduct]);
+  const value = useMemo(() => ({ products, homeProducts, cacheProducts, isLoading, refreshProducts, refreshError, getProductById, searchProducts, filterByCategory, createProduct, updateProduct, removeProduct }), [products, homeProducts, cacheProducts, isLoading, refreshProducts, refreshError, getProductById, searchProducts, filterByCategory, createProduct, updateProduct, removeProduct]);
   return <ProductsContext.Provider value={value}>{children}</ProductsContext.Provider>;
 }

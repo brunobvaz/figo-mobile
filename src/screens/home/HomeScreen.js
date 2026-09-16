@@ -1,11 +1,14 @@
-import LoadingIndicator from '../../components/common/LoadingIndicator';
-import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import ListSkeleton from '../../components/common/ListSkeleton';
+import EmptyState from '../../components/common/EmptyState';
+import { Ionicons } from '@expo/vector-icons';
+import { useCallback, useMemo, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import { AppState, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Input from '../../components/common/Input';
 import Header from '../../components/layout/Header';
 import Screen from '../../components/layout/Screen';
-import ProductList from '../../components/product/ProductList';
+import ProductShelf from '../../components/product/ProductShelf';
 import ProducerCard from '../../components/product/ProducerCard';
 import HomeLocationSheet from '../../components/home/HomeLocationSheet';
 import { useActiveLocation } from '../../context/ActiveLocationContext';
@@ -22,7 +25,15 @@ import { discoveryProducts, quickCategories } from '../../utils/homeDiscovery';
 
 export default function HomeScreen({ navigation }) {
   const { user } = useAuth();
-  const { products, isLoading } = useProducts();
+  const { fontScale } = useWindowDimensions();
+  const [contentWidth, setContentWidth] = useState(0);
+  const categoryWidth = Math.max(52 * Math.max(1, fontScale), (contentWidth - 30) / 6);
+  const { homeProducts: products, isLoading, refreshProducts, refreshError } = useProducts();
+  useFocusEffect(useCallback(() => {
+    refreshProducts();
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') refreshProducts(); });
+    return () => listener.remove();
+  }, [refreshProducts]));
   const [query, setQuery] = useState('');
   const [locationOpen, setLocationOpen] = useState(false);
   const { activeLocation, coordinates, region, locating, error: locationError } = useActiveLocation();
@@ -39,54 +50,57 @@ export default function HomeScreen({ navigation }) {
   const sectionHeader = (title, onPress) => <View style={styles.sectionHeader}>
     <Text accessibilityRole="header" style={styles.title}>{title}</Text>
     {onPress ? <Pressable accessibilityRole="button" accessibilityLabel={`Ver todos: ${title}`} onPress={onPress} style={styles.viewAll}>
-      <Text style={styles.link}>Ver todos →</Text>
+      <Text style={styles.link}>Ver todos</Text><Ionicons accessible={false} name="arrow-forward" size={18} color={colors.primaryDarkFigo} />
     </Pressable> : null}
   </View>;
   const productSection = (title, items, filters, variant) => items.length ? <View style={[styles.section, styles[variant]]}>
     {sectionHeader(title, () => explore(filters))}
-    <ProductList products={items} horizontal variant={variant} onProductPress={openProduct} />
+    <ProductShelf products={items} variant={variant} onProductPress={openProduct} />
   </View> : null;
   return <Screen scroll contentContainerStyle={styles.page}>
-    <Header title={`Olá, ${user?.name?.split(' ')[0] || 'Bruno'}`} subtitle="Descobre o que há perto de ti" location={locationLabel(activeLocation)} onLocationPress={() => setLocationOpen(true)} right={
+    <Header title={`Olá, ${user?.name?.split(' ')[0] || 'vizinho'}`} subtitle="Descobre o que há perto de ti" location={locationLabel(activeLocation)} onLocationPress={() => setLocationOpen(true)} right={
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => navigation.navigate(ROUTES.PROFILE)}><Avatar uri={user?.avatar} name={user?.name || ''} size={48} /></Pressable>
     } />
     <HomeLocationSheet visible={locationOpen} onClose={() => setLocationOpen(false)} />
     {locating ? <Text accessibilityLiveRegion="polite" style={styles.help}>A obter localização…</Text> : null}
     {locationError ? <Text accessibilityRole="alert" style={styles.help}>{locationError}</Text> : null}
     <Input leadingIcon="search-outline" accessibilityLabel="Pesquisar produtos locais" placeholder="Pesquisar produtos locais..." value={query} onChangeText={setQuery} returnKeyType="search" onSubmitEditing={() => explore({ query: query.trim() })} />
-    <View style={styles.categories}>
-      {quickCategories.map(([name, emoji]) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} style={styles.category} onPress={() => explore(name === 'Mais' ? {} : { category: name })}>
-        <Text style={styles.emoji}>{emoji}</Text><Text numberOfLines={1} style={styles.categoryLabel}>{name}</Text>
+    <View onLayout={event => setContentWidth(event.nativeEvent.layout.width)}><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categories}>
+      {quickCategories.map(([name, emoji]) => <Pressable key={name} accessibilityRole="button" accessibilityLabel={name} style={[styles.category, { width: categoryWidth }]} onPress={() => explore(name === 'Mais' ? {} : { category: name })}>
+        <Text accessible={false} style={styles.categoryEmoji}>{emoji}</Text><Text style={styles.categoryLabel}>{name}</Text>
       </Pressable>)}
-    </View>
-    {isLoading ? <LoadingIndicator color={colors.primaryFigo} /> : null}
+    </ScrollView></View>
+    {isLoading && !feed.length ? <ListSkeleton product rows={2} label="A carregar produtos" /> : null}
+    {refreshError ? <Pressable accessibilityRole="button" onPress={refreshProducts}><Text style={styles.help}>{refreshError}</Text></Pressable> : null}
     {productSection('Produtos em destaque', feed.filter(item => item.featured === true), { featured: true }, 'featured')}
     {productSection('Perto de ti', nearby, nearbyFilters, 'nearby')}
     {nearbyResults.error ? <Pressable accessibilityRole="button" onPress={nearbyResults.retry}><Text style={styles.help}>Não foi possível carregar os produtos próximos. Toca para tentar novamente.</Text></Pressable> : null}
     {productSection('Da época', feed.filter(item => isExplicitlyInSeason(item, currentSeason)), { season: currentSeason }, 'seasonal')}
-    {producers.length ? <View style={[styles.section, styles.producerSection]}>
-      {sectionHeader('Produtores em destaque')}
-      <FlatList horizontal data={producers} keyExtractor={item => String(item.id)} showsHorizontalScrollIndicator={false} contentContainerStyle={styles.producers}
-        renderItem={({ item }) => <ProducerCard producer={item} onPress={() => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: item.id })} />} />
+    {producers.length ? <View style={[styles.section, styles.sellers]}>
+      {sectionHeader('Vendedores em destaque')}
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.producers}>
+        {producers.map(item => <ProducerCard key={item.id} producer={item} style={{ width: 264 * Math.max(1, fontScale) }} onPress={() => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: item.id })} />)}
+      </ScrollView>
     </View> : null}
-    {!isLoading && !feed.length ? <Text style={styles.help}>Ainda não há produtos disponíveis para descobrir.</Text> : null}
+    {!isLoading && !feed.length ? <EmptyState title="Há espaço para os teus produtos" message="Publica o primeiro anúncio e partilha o que tens para vender." actionLabel="Publicar anúncio" onAction={() => navigation.navigate(ROUTES.SELL)} /> : null}
     <HomeDiscover />
   </Screen>;
 }
 const styles = StyleSheet.create({
   page: { paddingTop: spacing.md, gap: spacing.md },
-  section: { gap: spacing.xs, marginHorizontal: -spacing.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.sm, borderRadius: 18 },
+  section: { gap: spacing.sm, marginHorizontal: -8, paddingHorizontal: 8, paddingTop: 8, paddingBottom: 12, borderRadius: 22, overflow: 'hidden' },
   featured: { backgroundColor: '#FFEA99' },
   nearby: { backgroundColor: '#EDE9FE' },
   seasonal: { backgroundColor: '#D1FAE5' },
-  producerSection: { backgroundColor: '#FCE7F3' },
-  sectionHeader: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.xs },
+  sellers: { backgroundColor: '#FCE7F3' },
+  sectionHeader: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
   title: { fontSize: 21, color: colors.text, fontWeight: '700', flexShrink: 1 },
-  viewAll: { minHeight: 44, justifyContent: 'center' },
+  viewAll: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 6 },
   link: { color: colors.primaryDarkFigo, fontWeight: '600', fontSize: 14 },
-  help: { color: colors.textMuted, fontSize: 13, lineHeight: 19 },
-  producers: { gap: spacing.md, paddingVertical: spacing.sm },
+  help: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
+  producers: { gap: spacing.md, paddingTop: 6, paddingBottom: 2 },
   categories: { flexDirection: 'row', gap: 6 },
-  category: { flex: 1, minWidth: 44, alignItems: 'center', gap: 6, paddingVertical: 12, backgroundColor: colors.cream, borderRadius: 14 },
-  emoji: { fontSize: 23 }, categoryLabel: { fontSize: 10, color: colors.text },
+  category: { minHeight: 72, alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 10, borderRadius: 16, backgroundColor: '#F6F2E7' },
+  categoryEmoji: { fontSize: 26, lineHeight: 32, color: colors.text },
+  categoryLabel: { fontSize: 11, color: colors.text, textAlign: 'center', fontWeight: '500' },
 });

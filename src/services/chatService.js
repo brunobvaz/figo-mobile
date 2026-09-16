@@ -10,5 +10,8 @@ export const chatService = {
   open: (productId) => api.post('/conversations', { productId }),
   messages: (id, before) => api.get(`/conversations/${id}/messages?limit=50${before ? `&before=${encodeURIComponent(before)}` : ''}`),
   send: (id, text, clientId) => api.post(`/conversations/${id}/messages`, { text, clientId }),
-  read: (id, messageIds) => api.patch(`/conversations/${id}/read`, { messageIds })
+  read: (id, messageIds) => api.patch(`/conversations/${id}/read`, { messageIds }),
+  propose: (id, input) => api.post(`/conversations/${id}/transactions`, input),
+  purchaseAction: (id, transactionId, action, input = {}) => api.post(`/conversations/${id}/transactions/${transactionId}/${action}`, input),
+  myReputation: () => api.get('/users/me/reputation')
 };

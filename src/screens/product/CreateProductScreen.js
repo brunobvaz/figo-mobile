@@ -1,3 +1,7 @@
+import { useFeedback } from '../../context/FeedbackContext';
+import Header from '../../components/layout/Header';
+import { FORM_MAX_WIDTH } from '../../theme/layout';
+import { ROUTES } from '../../navigation/routes';
 import ProductPhotoPicker from '../../components/product/ProductPhotoPicker';
 import Loading from '../../components/common/Loading';
 import { productService } from '../../services/productService';
@@ -5,7 +9,7 @@ import { MAX_PRODUCT_PHOTOS, addSelectedPhotos, editableProductPhotos } from '..
 import ProductFieldHeading from '../../components/product/ProductFieldHeading';
 import ProductLocation from '../../components/product/ProductLocation';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Keyboard, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SEASONALITY_OPTIONS } from '../../utils/productSeasonality';
 import * as ImagePicker from 'expo-image-picker';
@@ -44,6 +48,10 @@ export default function CreateProductScreen({ navigation, route }) {
 
 function ProductForm({ navigation, existingProduct }) {
     const { createProduct, updateProduct } = useProducts();
+    const notify = useFeedback();
+    const scroll = useRef(null);
+    const sections = useRef({});
+    const sectionLayout = name => event => { sections.current[name] = event.nativeEvent.layout.y; };
     const [form, setForm] = useState(existingProduct ? {
         title: existingProduct.title, description: existingProduct.description, price: formatPriceInput(existingProduct.price), unit: existingProduct.unit,
         self_harvest: ['Frutas', 'Legumes'].includes(existingProduct.category) && existingProduct.self_harvest === true,
@@ -57,11 +65,20 @@ function ProductForm({ navigation, existingProduct }) {
     const [picking, setPicking] = useState(false);
     const savingRef = useRef(false);
     const pickingRef = useRef(false);
-    const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value, ...(key === 'category' && !['Frutas', 'Legumes'].includes(value) ? { self_harvest: false } : {}) }));
+    const update = key => value => {
+        setErrors(current => ({ ...current, [key]: undefined }));
+        setForm(current => ({ ...current, [key]: value, ...(key === 'category' && !['Frutas', 'Legumes'].includes(value) ? { self_harvest: false } : {}) }));
+    };
     const submit = async () => {
         if (savingRef.current || pickingRef.current) return;
-        const nextErrors = validateProduct(form); if (Object.keys(nextErrors).length) return setErrors(nextErrors);
-        if (!photos.length) return Alert.alert('Fotografia necessária', 'Seleciona pelo menos uma fotografia do produto.');
+        const nextErrors = { ...validateProduct(form), ...(!photos.length ? { photos: 'Adiciona pelo menos uma fotografia do produto.' } : {}) };
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length) {
+            const section = nextErrors.photos ? 'photos' : nextErrors.title || nextErrors.description || nextErrors.category ? 'product' : nextErrors.price || nextErrors.unit ? 'price' : 'location';
+            Keyboard.dismiss();
+            requestAnimationFrame(() => scroll.current?.scrollTo({ y: Math.max(0, (sections.current[section] || 0) - 16), animated: true }));
+            return;
+        }
         const payload = { ...form, price: parsePrice(form.price), imagesRevision };
         savingRef.current = true;
         setSaving(true);
@@ -69,12 +86,14 @@ function ProductForm({ navigation, existingProduct }) {
             if (existingProduct) {
                 const item = await updateProduct(existingProduct.id, payload, photos);
                 setPhotos(editableProductPhotos(item)); setImagesRevision(item.imagesRevision);
-                Alert.alert('Produto atualizado', 'As alterações foram guardadas.', [{ text: 'OK', onPress: () => navigation.goBack() }]);
+                navigation.goBack();
+                notify('Anúncio atualizado');
             } else {
                 const item = await createProduct(payload, photos);
                 setForm({ ...emptyProduct });
                 setPhotos([]); setImagesRevision(0);
-                Alert.alert('Anúncio publicado', 'O produto já está disponível no marketplace.', [{ text: 'Ver produto', onPress: () => navigation.navigate('ProductDetails', { productId: item.id }) }]);
+                navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id });
+                notify('Anúncio publicado');
             }
         } catch (error) { Alert.alert('Não foi possível guardar', error.message); }
         finally { savingRef.current = false; setSaving(false); }
@@ -94,89 +113,66 @@ function ProductForm({ navigation, existingProduct }) {
             if (result.canceled) return;
             const selection = addSelectedPhotos(photos, result.assets);
             setPhotos(selection.photos);
+            if (selection.photos.length) setErrors(current => ({ ...current, photos: undefined }));
             const warnings = [selection.tooLarge ? 'Cada fotografia pode ter até 5 MB.' : '', selection.unsupported ? 'Escolhe fotografias JPEG, PNG ou WebP.' : '', selection.excess ? 'Podes adicionar até 6 fotografias.' : ''].filter(Boolean);
             if (warnings.length) Alert.alert('Algumas fotografias não foram adicionadas', warnings.join('\n'));
         } catch (error) { Alert.alert('Não foi possível selecionar as fotografias', error.message); }
         finally { pickingRef.current = false; setPicking(false); }
     };
 
-    return <Screen scroll contentContainerStyle={styles.page}>
-        <Text style={styles.title}>{existingProduct ? 'Editar produto' : 'O que tens para partilhar?'}</Text>
-        <ProductPhotoPicker photos={photos} disabled={saving || picking} loading={picking} onAdd={chooseImages}
+    return <Screen scroll scrollRef={scroll} maxWidth={FORM_MAX_WIDTH} contentContainerStyle={styles.page}>
+        {!existingProduct ? <Header title="O que tens para vender?" subtitle="Prepara o teu anúncio com fotografias e informação clara." /> : null}
+        <View onLayout={sectionLayout('photos')}>
+          <ProductPhotoPicker photos={photos} disabled={saving || picking} loading={picking} error={errors.photos} onAdd={chooseImages}
             onRemove={index => setPhotos(current => current.filter((_, position) => position !== index))}
             onCover={index => setPhotos(current => [current[index], ...current.filter((_, position) => position !== index)])} />
-        <View style={styles.card}>
-        <ProductFieldHeading title="Título" subtitle="Dá um nome simples e claro ao produto." />
-        <Input
-            accessibilityLabel="Título"
-            value={form.title}
-            onChangeText={update('title')}
-            error={errors.title} />
         </View>
-        <View style={styles.card}>
-        <ProductFieldHeading title="Descrição" subtitle="Descreve as características e o estado do produto." />
-        <Input
-            accessibilityLabel="Descrição"
-            value={form.description}
-            onChangeText={update('description')}
-            multiline
-            error={errors.description}
-        />
-        </View>
-        <View style={styles.card}>
-        <ProductPriceInput
-            price={form.price}
-            unit={form.unit}
-            onPriceChange={update('price')}
-            onUnitChange={update('unit')}
-            error={errors.price || errors.unit}
-        />
-        </View>
-        <View style={styles.card}>
-        <Choice
-            label="Categoria"
-            items={mockCategories.slice(1)}
-            value={form.category}
-            onChange={update('category')}
-        />
-        </View>
-        {['Frutas', 'Legumes'].includes(form.category) ? <View style={styles.card}>
-          <View style={styles.harvestRow}>
-            <View style={{ flex: 1 }}><ProductFieldHeading title="O comprador pode colher no local?" /></View>
-            <Switch accessibilityLabel="O comprador pode colher no local?" value={form.self_harvest} onValueChange={update('self_harvest')} disabled={saving} trackColor={{ true: colors.primaryDarkFigo, false: colors.border }} />
+        <FormSection title="Informação do produto" onLayout={sectionLayout('product')}>
+          <Input label="Título" placeholder="Ex.: Tomates da horta" value={form.title} editable={!saving} onChangeText={update('title')} error={errors.title} />
+          <Input label="Descrição" placeholder="Descreve o produto, a origem e o que o torna especial." value={form.description} editable={!saving} onChangeText={update('description')} multiline error={errors.description} />
+          <Choice label="Categoria" items={mockCategories.slice(1)} value={form.category} disabled={saving} onChange={update('category')} />
+          {errors.category ? <Text accessibilityRole="alert" style={styles.error}>{errors.category}</Text> : null}
+          <View style={styles.field}>
+            <ProductFieldHeading title="Sazonalidade" subtitle="Quando está disponível?" />
+            <View style={styles.options}>
+              {SEASONALITY_OPTIONS.map(option => {
+                const selected = form.seasonality === option.value;
+                return <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
+                  accessibilityState={{ checked: selected, disabled: saving }} disabled={saving} onPress={() => update('seasonality')(option.value)}
+                  style={[styles.seasonOption, selected && styles.seasonSelected]}>
+                  <Ionicons accessible={false} name={option.icon} size={21} color={selected ? colors.surface : colors.text} />
+                  <Text style={[styles.seasonText, selected && styles.seasonSelectedText]}>{option.label}</Text>
+                </Pressable>;
+              })}
+            </View>
           </View>
-          <Text style={styles.activationText}>Permite ao comprador colher diretamente da árvore ou da horta, mediante combinação contigo.</Text>
-        </View> : null}
-        <View style={styles.card}>
-          <ProductFieldHeading title="Sazonalidade" subtitle="Indica em que época do ano o produto está disponível." />
-          <View style={styles.options}>
-            {SEASONALITY_OPTIONS.map(option => {
-              const selected = form.seasonality === option.value;
-              return <Pressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
-                accessibilityState={{ checked: selected, disabled: saving }} disabled={saving}
-                onPress={() => update('seasonality')(option.value)}
-                style={[styles.seasonOption, selected && styles.seasonSelected]}>
-                <Ionicons name={option.icon} size={21} color={selected ? colors.surface : colors.text} />
-                <Text style={[styles.seasonText, selected && styles.seasonSelectedText]}>{option.label}</Text>
-              </Pressable>;
-            })}
-          </View>
-        </View>
-        <View style={styles.card}>
-          <ProductFieldHeading title="Localização" subtitle="Escolhe o concelho e a freguesia onde está o produto." />
-          <ProductLocation form={form} setForm={setForm} errors={errors} />
-        </View>
-        <Button
-            title={existingProduct ? 'Guardar alterações' : 'Publicar anúncio'}
-            loading={saving}
-            disabled={picking}
-            onPress={submit}
-        />
-    </Screen>
-        ;
+          {['Frutas', 'Legumes'].includes(form.category) ? <View style={styles.field}>
+            <View style={styles.harvestRow}>
+              <View style={{ flex: 1 }}><ProductFieldHeading title="Colheita pelo comprador" /></View>
+              <Switch accessibilityLabel="O comprador pode colher no local?" value={form.self_harvest} onValueChange={update('self_harvest')} disabled={saving} trackColor={{ true: colors.primaryDarkFigo, false: colors.border }} />
+            </View>
+            <Text style={styles.activationText}>O comprador pode colher na árvore ou na horta, mediante combinação contigo.</Text>
+          </View> : null}
+        </FormSection>
+        <FormSection title="Preço" onLayout={sectionLayout('price')}>
+          <ProductPriceInput hideHeading price={form.price} unit={form.unit} onPriceChange={update('price')} onUnitChange={update('unit')} error={errors.price || errors.unit} disabled={saving} />
+        </FormSection>
+        <FormSection title="Localização" subtitle="Indica onde está o produto." onLayout={sectionLayout('location')}>
+          <ProductLocation form={form} disabled={saving} setForm={change => { setForm(change); setErrors(current => ({ ...current, location: undefined })); }} errors={errors} />
+        </FormSection>
+        <Text style={styles.activationText}>A entrega e o pagamento são combinados diretamente com o comprador.</Text>
+        <Button title={existingProduct ? 'Guardar alterações' : 'Publicar anúncio'} loading={saving} disabled={picking} onPress={submit} />
+    </Screen>;
 }
 
-function Choice({ label, items, value, onChange }) {
+function FormSection({ title, subtitle, children, onLayout }) {
+  return <View style={styles.card} onLayout={onLayout}>
+    <View style={styles.field}><Text accessibilityRole="header" style={styles.sectionTitle}>{title}</Text>{subtitle ? <Text style={styles.activationText}>{subtitle}</Text> : null}</View>
+    {children}
+  </View>;
+}
+
+function Choice({ label, items, value, onChange, disabled }) {
     const [expanded, setExpanded] = useState(false);
     const initialItems = items.slice(0, 5);
     if (value && !initialItems.includes(value)) initialItems[4] = value;
@@ -187,6 +183,7 @@ function Choice({ label, items, value, onChange }) {
             {visibleItems.map(item => <Chip
                 key={item}
                 label={item}
+                disabled={disabled}
                 selected={item === value}
                 onPress={() => onChange(item)}
                 style={styles.categoryChip}
@@ -204,17 +201,19 @@ function Choice({ label, items, value, onChange }) {
 
 const styles = StyleSheet.create({
     harvestRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
-    page: { paddingTop: spacing.md, gap: spacing.md, paddingBottom: spacing.xxl },
-    activationText: { color: colors.textMuted, lineHeight: 22 },
-    title: { color: colors.primaryDarkFigo, fontSize: 26, fontWeight: '800' },
+    page: { paddingTop: spacing.md, gap: spacing.lg, paddingBottom: spacing.xxl },
+    field: { gap: 10 },
+    sectionTitle: { color: colors.text, fontSize: 20, fontWeight: '700' },
+    error: { color: colors.error, fontSize: 13, lineHeight: 19 },
+    activationText: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
     choice: { gap: spacing.sm },
     card: {
         backgroundColor: colors.surface,
         borderRadius: 16,
         padding: 16,
-        gap: 10,
+        gap: 20,
         borderWidth: 1,
-        borderColor: '#F0EEEB',
+        borderColor: colors.borderSubtle,
         shadowColor: '#30263B',
         shadowOffset: { width: 0, height: 2 },
         shadowOpacity: 0.03,
@@ -223,10 +222,10 @@ const styles = StyleSheet.create({
     },
     options: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
     seasonOption: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, minHeight: 48, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, borderRadius: 14, backgroundColor: colors.cream },
-    seasonSelected: { backgroundColor: colors.primaryFigo },
+    seasonSelected: { backgroundColor: colors.primaryDarkFigo },
     seasonText: { color: colors.text, fontSize: 15, flexShrink: 1 },
     seasonSelectedText: { color: colors.surface, fontWeight: '600' },
-    categoryChip: { flexBasis: '30%', flexGrow: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 26 },
+    categoryChip: { minWidth: 112, flexGrow: 1, minHeight: 48, justifyContent: 'center', paddingHorizontal: 8, borderRadius: 26 },
     categoryText: { textAlign: 'center' },
     moreChip: { backgroundColor: '#F8F4FA', borderWidth: 1, borderStyle: 'dashed', borderColor: '#E3D6E9' }
 });

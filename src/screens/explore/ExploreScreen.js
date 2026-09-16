@@ -1,5 +1,6 @@
-import LoadingScreen from '../../components/common/LoadingScreen';
-import { useIsFocused } from '@react-navigation/native';
+import ListSkeleton from '../../components/common/ListSkeleton';
+import Header from '../../components/layout/Header';
+import { CONTENT_MAX_WIDTH, productGridLayout } from '../../theme/layout';
 import useTabBarClearance from '../../hooks/useTabBarClearance';
 import { useEffect, useMemo, useState } from 'react';
 import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
@@ -22,7 +23,6 @@ import spacing from '../../theme/spacing';
 
 const EMPTY_FILTERS = {};
 export default function ExploreScreen({ navigation, route }) {
-  const focused = useIsFocused();
   const tabBarClearance = useTabBarClearance();
   const filters = route.params?.filters || EMPTY_FILTERS;
   const { products: cachedProducts } = useProducts();
@@ -43,8 +43,8 @@ export default function ExploreScreen({ navigation, route }) {
   const setRegion = value => updateFilters({ municipalityCode: value.municipalityCode || undefined, parishCode: value.parishCode || undefined });
   const results = useExploreProducts(filters, coordinates, region);
   const { width, fontScale } = useWindowDimensions();
-  const columns = width >= 360 && fontScale <= 1.3 ? 2 : 1;
-  const cardWidth = (width - spacing.md * 2 - (columns - 1) * spacing.md) / columns;
+  const [listWidth, setListWidth] = useState(0);
+  const { columns, cardWidth } = productGridLayout(listWidth || Math.min(width, CONTENT_MAX_WIDTH) - spacing.md * 2, fontScale);
   const producers = useMemo(() => [...new Map(cachedProducts.filter(item => item.seller?.id).map(item => [item.seller.id, item.seller])).values()], [cachedProducts]);
   const openProduct = product => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: product.id });
   const editorialFilter = Boolean(filters.featured || filters.seasonal || filters.season);
@@ -57,7 +57,7 @@ export default function ExploreScreen({ navigation, route }) {
     ...((filters.season || filters.seasonal) ? [{ label: 'Da época', patch: { seasonal: undefined, season: undefined } }] : []),
     ...(filters.availableOnly ? [{ label: 'Apenas disponíveis', patch: { availableOnly: undefined } }] : []),
     ...(filters.unit ? [{ label: filters.unit.replace('€/', ''), patch: { unit: undefined } }] : []),
-    ...(filters.sellerId ? [{ label: producers.find(item => item.id === filters.sellerId)?.name || 'Produtor', patch: { sellerId: undefined } }] : []),
+    ...(filters.sellerId ? [{ label: producers.find(item => item.id === filters.sellerId)?.name || route.params?.sellerName || 'Vendedor', patch: { sellerId: undefined } }] : []),
   ];
   const empty = !results.busy && !results.error ? <View>
     <EmptyState title="Não encontrámos produtos" message="Tenta aumentar a distância ou remover alguns filtros." />
@@ -65,7 +65,8 @@ export default function ExploreScreen({ navigation, route }) {
     <Button title="Limpar filtros" variant="secondary" onPress={clear} />
   </View> : null;
   const loadMore = results.hasMore ? <Button title="Carregar mais" variant="secondary" loading={results.busy} onPress={results.loadMore} /> : null;
-  return <LoadingScreen blocking={false} loading={focused && !panel && results.busy && !results.products.length} message="A pesquisar produtos…"><Screen contentContainerStyle={styles.page}>
+  return <Screen onContentLayout={event => setListWidth(event.nativeEvent.layout.width - spacing.md * 2)} safeAreaEdges={route.name === ROUTES.SELLER_PRODUCTS ? ['left', 'right', 'bottom'] : undefined} contentContainerStyle={styles.page}>
+    {route.name !== ROUTES.SELLER_PRODUCTS ? <Header title="Explorar" /> : null}
     <View style={styles.search}>
       <View style={styles.searchInput}><Input leadingIcon="search-outline" placeholder="Pesquisar produtos..." accessibilityLabel="Pesquisar produtos" value={filters.query || ''} maxLength={100} onChangeText={query => updateFilters({ query })} returnKeyType="search" /></View>
       {filters.query ? <Pressable accessibilityRole="button" accessibilityLabel="Limpar pesquisa" style={styles.clearSearch} onPress={() => updateFilters({ query: undefined })}><Ionicons name="close-circle" size={23} color={colors.primaryDarkFigo} /></Pressable> : null}
@@ -95,13 +96,13 @@ export default function ExploreScreen({ navigation, route }) {
       contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]} columnWrapperStyle={columns > 1 ? styles.row : undefined}
       initialNumToRender={6} maxToRenderPerBatch={6} windowSize={5}
       renderItem={({ item }) => <ProductCard product={item} showBadges style={{ width: cardWidth }} onPress={() => openProduct(item)} />}
-      ListEmptyComponent={empty} ListFooterComponent={loadMore} />
+      ListEmptyComponent={results.busy ? <ListSkeleton product label="A pesquisar produtos" /> : empty} ListFooterComponent={loadMore} />
       : <View style={styles.results}>
-        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]}>{empty}</ScrollView>}
+        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]}>{results.busy ? <ListSkeleton product label="A pesquisar produtos" /> : empty}</ScrollView>}
         {loadMore}
       </View>}
     <ExploreFilterSheet panel={panel} filters={filters} onClose={() => setPanel(null)} onApply={updateFilters} region={region} onRegionChange={setRegion} onLocate={locate} locating={locating} producers={producers} />
-  </Screen></LoadingScreen>;
+  </Screen>;
 }
 const styles = StyleSheet.create({
   page: { flex: 1, minHeight: 0, paddingTop: spacing.md, paddingBottom: 0, gap: spacing.sm },
@@ -111,6 +112,6 @@ const styles = StyleSheet.create({
   horizontal: { flexGrow: 0, flexShrink: 0 }, chips: { gap: 8, alignItems: 'center' }, chip: { minHeight: 44, justifyContent: 'center' },
   resultHeader: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 12 }, count: { color: colors.text, fontWeight: '700', flexGrow: 1 }, sort: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.xs }, link: { color: colors.primaryDarkFigo, fontWeight: '600', fontSize: 13 },
   results: { flex: 1, minHeight: 0, gap: 8 }, list: { gap: spacing.md, paddingBottom: spacing.lg, paddingTop: 4 }, row: { gap: spacing.md },
-  help: { color: colors.textMuted, fontSize: 12, lineHeight: 17 }, locationNote: { color: colors.primaryDark, fontSize: 12, lineHeight: 17 },
+  help: { color: colors.textMuted, fontSize: 13, lineHeight: 19 }, locationNote: { color: colors.primaryDark, fontSize: 13, lineHeight: 19 },
   feedback: { gap: 8 }, error: { color: colors.error, fontSize: 13 },
 });

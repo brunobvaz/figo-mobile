@@ -20,6 +20,7 @@ export const ROUTES = {
     CONVERSATIONS: 'Conversations',
     CHAT: 'Chat',
     SELLER_PROFILE: 'SellerProfile', 
+    SELLER_PRODUCTS: 'SellerProducts',
     EDIT_PROFILE: 'EditProfile', 
     SEASONAL_RECIPES: 'SeasonalRecipesScreen',
     FAIRS_EVENTS: 'FairsEventsScreen',

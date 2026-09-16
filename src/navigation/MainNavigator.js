@@ -4,7 +4,7 @@ import LegalDocumentScreen from '../screens/legal/LegalDocumentScreen';
 import { useEffect, useState } from 'react';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { I18nManager, Keyboard, Platform, StyleSheet, View } from 'react-native';
+import { I18nManager, Keyboard, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import Badge from '../components/common/Badge';
@@ -54,6 +54,9 @@ const TAB_BAR_GAP = 8;
 
 function TabNavigator() {
     const insets = useSafeAreaInsets();
+    const { width, fontScale } = useWindowDimensions();
+    const barWidth = Math.min(640, width - insets.left - insets.right - 32);
+    const side = Math.max(16, (width - insets.left - insets.right - barWidth) / 2);
     const [keyboardVisible, setKeyboardVisible] = useState(false);
     useEffect(() => {
         // Authentication can unmount its input before the keyboard hide event reaches this navigator.
@@ -72,8 +75,10 @@ function TabNavigator() {
                 tabBarActiveTintColor: colors.primaryDarkFigo,
                 tabBarInactiveTintColor: colors.textMuted,
                 tabBarLabelPosition: 'below-icon',
+                tabBarLabelStyle: { fontSize: 12, fontWeight: '600' },
+                tabBarItemStyle: { minHeight: 52 },
                 tabBarHideOnKeyboard: true,
-                tabBarStyle: [styles.floatingBar, { bottom: keyboardVisible ? 0 : bottom, start: (I18nManager.isRTL ? insets.right : insets.left) + 16, end: (I18nManager.isRTL ? insets.left : insets.right) + 16 }],
+                tabBarStyle: [styles.floatingBar, { height: TAB_BAR_HEIGHT + Math.max(0, Math.min(fontScale, 2) - 1) * 24, bottom: keyboardVisible ? 0 : bottom, start: (I18nManager.isRTL ? insets.right : insets.left) + side, end: (I18nManager.isRTL ? insets.left : insets.right) + side }],
                 sceneStyle: { backgroundColor: colors.background },
                 tabBarIcon: ({ focused, color, size }) => <TabIcon routeName={route.name} focused={focused} color={color} size={size} />
             })}>
@@ -85,7 +90,7 @@ function TabNavigator() {
             </Tabs.Navigator>; }
 
 export default function MainNavigator() { 
-    return <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
+    return <Stack.Navigator initialRouteName="MainTabs" screenOptions={{ headerTintColor: colors.primaryDarkFigo, headerTitleAlign: 'center', headerTitleStyle: { color: colors.primaryDarkFigo, fontSize: 18, fontWeight: '600' }, headerBackTitle: 'Voltar', headerStyle: { backgroundColor: colors.background }, headerShadowVisible: false }}>
                 <Stack.Screen name={ROUTES.LEGAL_INFO} component={LegalInfoScreen} options={{ title: 'Informação legal' }} />
         <Stack.Screen name={ROUTES.ACCOUNT_ACTION} component={AccountActionScreen} options={{ headerShown: true, title: 'Conta', headerBackTitle: 'Voltar' }} />
         <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
@@ -97,9 +102,10 @@ export default function MainNavigator() {
                 <Stack.Screen getId={({ params }) => params?.conversationId || params?.productId} name={ROUTES.CHAT} component={ChatScreen} options={({ route }) => ({ title: route.params?.participantName || route.params?.sellerName || 'Conversa' })} />
                 <Stack.Screen name={ROUTES.MY_PRODUCTS} component={AccountProductsScreen} options={{ title: 'Os meus anúncios' }} />
                 <Stack.Screen name={ROUTES.FAVORITES} component={FavoritesScreen} options={{ title: 'Favoritos' }} />
-                <Stack.Screen name={ROUTES.SELLER_PROFILE} component={SellerProfileScreen} options={{ title: 'Produtor' }} />
+                <Stack.Screen name={ROUTES.SELLER_PROFILE} component={SellerProfileScreen} options={{ title: 'Perfil' }} />
+                <Stack.Screen name={ROUTES.SELLER_PRODUCTS} component={ExploreScreen} options={{ title: 'Produtos publicados' }} />
                 <Stack.Screen name={ROUTES.EDIT_PROFILE} component={EditProfileScreen} options={{ title: 'Editar perfil' }} />
-                <Stack.Screen name={ROUTES.ORDERS} component={OrdersScreen} options={{ title: 'Encomendas' }} />
+                <Stack.Screen name={ROUTES.ORDERS} component={OrdersScreen} options={({ route }) => ({ title: route.params?.role === 'seller' ? 'As minhas vendas' : 'As minhas encomendas' })} />
            </Stack.Navigator>; }
 
 const styles = StyleSheet.create({

@@ -40,7 +40,8 @@ export default function Button({
 }
 const styles = StyleSheet.create({
   button: {
-    minHeight: 50,
+    minHeight: 52,
+    paddingVertical: 12,
     paddingHorizontal: spacing.lg,
     borderRadius: 14,
     backgroundColor: colors.primaryDarkFigo,
@@ -53,7 +54,7 @@ const styles = StyleSheet.create({
     borderColor: colors.primaryDarkFigo
   },
   soft: {
-    minHeight: 70,
+    minHeight: 52,
     paddingVertical: 12,
     backgroundColor: '#F6F1F9',
     borderWidth: 1,

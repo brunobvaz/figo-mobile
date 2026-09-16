@@ -1,5 +1,6 @@
+import { useFeedback } from '../../context/FeedbackContext';
 import { ROUTES } from '../../navigation/routes';
-import { useLayoutEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
@@ -14,41 +15,45 @@ import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 
 const editColors = {
-    text: '#19172C',
-    muted: '#80859A',
-    lavender: '#F2EBF7',
-    iconBackground: '#F8F2FC',
+    text: colors.text,
+    muted: colors.textMuted,
+    lavender: colors.surfaceSoft,
+    iconBackground: colors.surfaceSoft,
     danger: '#DF3450',
     dangerBackground: '#FFF1F3',
 };
 
 export default function EditProfileScreen({ navigation }) {
     const { user, updateProfile, updateAvatar } = useAuth();
+    const notify = useFeedback();
+    const [errors, setErrors] = useState({});
     const { width, fontScale } = useWindowDimensions();
     const [form, setForm] = useState(() => ({ ...profileNameFields(user), location: { municipalityCode: user.location?.municipalityCode || '', parishCode: user.location?.parishCode || '' } }));
     const lastNameInput = useRef(null);
+    const scroll = useRef(null);
+    const fieldPositions = useRef({});
     const [saving, setSaving] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-    useLayoutEffect(() => {
-        navigation.setOptions({
-            title: 'Editar perfil',
-            headerTitleAlign: 'center',
-            headerTitleStyle: { color: editColors.text, fontSize: 18, fontWeight: '700' },
-        });
-    }, [navigation]);
-
-    const update = (key) => (value) => setForm((current) => ({ ...current, [key]: value }));
+    const update = key => value => { setErrors(current => ({ ...current, [key]: undefined })); setForm(current => ({ ...current, [key]: value })); };
     const save = async () => {
         if (saving || uploadingPhoto) return;
         const firstName = form.firstName.trim();
         const lastName = form.lastName.trim();
-        if (firstName.length < 2 || firstName.length > 60) return Alert.alert('Nome inválido', 'Indica o teu nome, entre 2 e 60 caracteres.');
-        if (lastName.length < 2 || lastName.length > 80) return Alert.alert('Apelido inválido', 'Indica o teu apelido, entre 2 e 80 caracteres.');
-        if (!form.location.municipalityCode || !form.location.parishCode) return Alert.alert('Localização em falta', 'Seleciona o concelho e a freguesia.');
+        const nextErrors = {};
+        if (firstName.length < 2 || firstName.length > 60) nextErrors.firstName = 'Indica entre 2 e 60 caracteres.';
+        if (lastName.length < 2 || lastName.length > 80) nextErrors.lastName = 'Indica entre 2 e 80 caracteres.';
+        if (!form.location.municipalityCode || !form.location.parishCode) nextErrors.location = 'Seleciona o concelho e a freguesia.';
+        setErrors(nextErrors);
+        if (Object.keys(nextErrors).length) {
+            Keyboard.dismiss();
+            const first = ['firstName', 'lastName', 'location'].find(key => nextErrors[key]);
+            requestAnimationFrame(() => scroll.current?.scrollTo({ y: Math.max(0, (fieldPositions.current[first] || 0) - 16), animated: true }));
+            return;
+        }
         Keyboard.dismiss();
         setSaving(true);
-        try { await updateProfile({ firstName, lastName, location: form.location }); navigation.goBack(); }
+        try { await updateProfile({ firstName, lastName, location: form.location }); navigation.goBack(); notify('Perfil atualizado'); }
         catch (error) { Alert.alert('Não foi possível guardar', error.message); }
         finally { setSaving(false); }
     };
@@ -64,12 +69,13 @@ export default function EditProfileScreen({ navigation }) {
             const asset = result.assets[0];
             if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) return Alert.alert('Imagem demasiado grande', 'Escolhe uma fotografia com menos de 5 MB.');
             await updateAvatar(asset);
+            notify('Fotografia atualizada');
         }
         catch (error) { Alert.alert('Não foi possível carregar', error.message); }
         finally { setUploadingPhoto(false); }
     };
 
-    return <Screen scroll safeAreaEdges={['bottom', 'left', 'right']} contentContainerStyle={styles.page}>
+    return <Screen scroll scrollRef={scroll} safeAreaEdges={['bottom', 'left', 'right']} contentContainerStyle={styles.page}>
         <View style={[styles.photoSection, (width < 350 || fontScale > 1.3) && styles.photoSectionStacked]}>
             <View style={styles.avatarContainer}>
                 <Avatar uri={user.avatar} name={user.name} size={100} />
@@ -92,9 +98,9 @@ export default function EditProfileScreen({ navigation }) {
             </Pressable>
         </View>
 
-        <View style={styles.field}>
+        <View style={styles.field} onLayout={event => { fieldPositions.current.firstName = event.nativeEvent.layout.y; }}>
             <Text style={styles.label}>Nome</Text>
-            <View style={[styles.nameField, saving && styles.dimmed]}>
+            <View style={[styles.nameField, errors.firstName && styles.fieldError, saving && styles.dimmed]}>
                 <View pointerEvents="none" accessible={false} style={styles.nameIcon}>
                     <Ionicons name="person-outline" size={23} color={colors.primaryDarkFigo} />
                 </View>
@@ -114,9 +120,10 @@ export default function EditProfileScreen({ navigation }) {
                 />
             </View>
         </View>
-        <View style={styles.field}>
+        {errors.firstName ? <Text accessibilityRole="alert" style={styles.error}>{errors.firstName}</Text> : null}
+        <View style={styles.field} onLayout={event => { fieldPositions.current.lastName = event.nativeEvent.layout.y; }}>
             <Text style={styles.label}>Apelido</Text>
-            <View style={[styles.nameField, saving && styles.dimmed]}>
+            <View style={[styles.nameField, errors.lastName && styles.fieldError, saving && styles.dimmed]}>
                 <View pointerEvents="none" accessible={false} style={styles.nameIcon}>
                     <Ionicons name="person-outline" size={23} color={colors.primaryDarkFigo} />
                 </View>
@@ -137,9 +144,11 @@ export default function EditProfileScreen({ navigation }) {
                 />
             </View>
         </View>
-        <View style={styles.field}>
+        {errors.lastName ? <Text accessibilityRole="alert" style={styles.error}>{errors.lastName}</Text> : null}
+        <View style={styles.field} onLayout={event => { fieldPositions.current.location = event.nativeEvent.layout.y; }}>
             <Text style={styles.label}>Localização</Text>
             <AddressSelect compact disabled={saving} {...form.location} onChange={update('location')} />
+            {errors.location ? <Text accessibilityRole="alert" style={styles.error}>{errors.location}</Text> : null}
         </View>
 
         <View style={styles.accountSection}>
@@ -208,8 +217,10 @@ const styles = StyleSheet.create({
     photoCard: { flex: 1, minHeight: 84, flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, borderRadius: 20, backgroundColor: editColors.lavender },
     photoCopy: { flex: 1, minWidth: 0, gap: 4 },
     photoTitle: { color: colors.primaryDarkFigo, fontSize: 16, fontWeight: '700' },
-    photoDescription: { color: '#7B7395', fontSize: 13, lineHeight: 17 },
+    photoDescription: { color: colors.textMuted, fontSize: 14, lineHeight: 21 },
     field: { gap: 8 },
+    fieldError: { borderColor: colors.error },
+    error: { color: colors.error, fontSize: 13, lineHeight: 19 },
     label: { color: editColors.text, fontSize: 15, fontWeight: '600' },
     nameField: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 8, borderRadius: 14, borderWidth: 1, borderColor: '#E4E1E8', backgroundColor: colors.surface },
     nameIcon: { width: 34, height: 34, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: editColors.iconBackground },
@@ -222,11 +233,11 @@ const styles = StyleSheet.create({
     dangerIcon: { backgroundColor: editColors.dangerBackground },
     accountCopy: { flex: 1, minWidth: 0, gap: 3 },
     accountTitle: { color: editColors.text, fontSize: 15, fontWeight: '700' },
-    accountDescription: { color: editColors.muted, fontSize: 13, lineHeight: 17 },
+    accountDescription: { color: editColors.muted, fontSize: 14, lineHeight: 21 },
     notice: { flexDirection: 'row', alignItems: 'flex-start', gap: 10, padding: 14, borderRadius: 15, backgroundColor: editColors.lavender, marginTop: 2 },
     noticeCopy: { flex: 1, minWidth: 0, gap: 4 },
     noticeTitle: { color: colors.primaryDarkFigo, fontSize: 15, fontWeight: '700' },
-    noticeText: { color: '#816196', fontSize: 13, lineHeight: 18 },
+    noticeText: { color: colors.textMuted, fontSize: 13, lineHeight: 18 },
     saveButton: { minHeight: 52, borderRadius: 15, marginTop: -4 },
     dimmed: { opacity: 0.6 },
 });

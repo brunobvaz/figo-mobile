@@ -1,7 +1,7 @@
 export default {
     sizes: {
-        caption: 12,
-        body: 15,
+        caption: 13,
+        body: 16,
         subtitle: 18,
         sectionTitle: 20,
         title: 24,

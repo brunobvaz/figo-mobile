@@ -14,9 +14,10 @@ export default StyleSheet.create({
     screenTitle: {
         color: colors.primaryDarkFigo,
         fontSize: typography.sizes.screenTitle,
-        fontWeight: typography.weights.extraBold
+        fontWeight: typography.weights.bold
     },
     screenSubtitle: {
+        fontSize: typography.sizes.body,
         color: colors.textMuted,
         lineHeight: typography.lineHeights.body,
         marginBottom: spacing.md
@@ -35,6 +36,7 @@ export default StyleSheet.create({
         fontWeight: typography.weights.extraBold
     },
     brandTagline: {
+        fontSize: typography.sizes.body,
         marginTop: spacing.sm,
         color: colors.textMuted
     },

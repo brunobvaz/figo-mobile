@@ -19,6 +19,7 @@ export function productQuery(filters, coordinates, region = {}) {
     ...region,
     sort: filters.sortBy === 'distance' && !coordinates ? 'recent' : filters.sortBy || 'recent',
     availableOnly: filters.availableOnly || undefined,
+    featured: filters.featured === true ? true : undefined,
     unit: filters.unit || undefined, sellerId: filters.sellerId || undefined,
     limit: 20,
   };
@@ -40,12 +41,11 @@ export function resetExploreFilters(filters) {
   return { viewMode: filters.viewMode || 'list' };
 }
 
-// Temporary editorial metadata shared with Home; never assigns featured by result order.
-export function applyEditorialFilters(items, filters, editorialProducts) {
-  const metadata = new Map(editorialProducts.map(item => [item.id, item]));
+// Use only the product returned by the API, never a synthetic/local editorial flag.
+export function applyEditorialFilters(items, filters) {
   return items.map(item => ({ ...item,
-    featured: item.featured ?? metadata.get(item.id)?.featured ?? false,
-    seasonal: metadata.get(item.id)?.seasonal ?? item.seasonal ?? false,
+    featured: item.featured === true,
+    seasonal: isExplicitlyInSeason(item),
   })).filter(item => (!filters.featured || item.featured) && (!(filters.season || filters.seasonal) || isExplicitlyInSeason(item, filters.season)));
 }
 

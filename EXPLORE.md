@@ -6,7 +6,9 @@ O ecrã mantém os filtros aplicados em `route.params.filters`, conforme `Explor
 
 Texto, categoria, preço, unidade, vendedor, disponibilidade e ordenação são aplicados pela API antes de paginar. Sem coordenadas, a pesquisa continua por região e a ordenação efetiva é por data. Um raio omitido significa qualquer distância, incluindo para ordenação por proximidade. Mantém-se a regra existente da API que exclui vendidos nas pesquisas geográficas.
 
-Destaques e sazonalidade usam os metadados opcionais existentes e a seleção temporária partilhada com Home (`homeDiscovery`). São aplicados às páginas carregadas, sem inventar correspondências: a contagem indica produtos carregados enquanto existirem páginas. Carregar mais continua disponível mesmo quando uma página não contém correspondências. TODO: seleção editorial/sazonal do backend e filtros/contagens globais correspondentes. Tipo de entrega não existe no modelo e está reservado no contrato, sem controlo ativo.
+Os destaques usam exclusivamente `featured: true`, definido por um administrador no backoffice. O filtro `featured=true` é enviado à API antes da paginação e a contagem corresponde ao total filtrado. No Início, uma consulta própria carrega até 20 destaques, incluindo anúncios antigos fora da primeira página geral; “Ver todos” abre a lista paginada. Sem anúncios destacados, a secção não aparece. Anúncios antigos sem a flag são tratados como não destacados. A seleção atualiza ao regressar ao ecrã, ao puxar para atualizar e a cada 30 segundos enquanto a app está ativa.
+
+A sazonalidade continua a ser aplicada às páginas carregadas, com base na disponibilidade guardada no anúncio. Nesse filtro, a contagem indica produtos carregados enquanto existirem páginas. Carregar mais continua disponível mesmo quando uma página não contém correspondências. Tipo de entrega não existe no modelo e está reservado no contrato, sem controlo ativo.
 
 O mapa usa `react-native-maps` 1.27.2, Apple Maps no iOS e Google Maps no Android. Os pins usam os centros de freguesia da API de localidades, sem expor coordenadas privadas do produto. Produtos no mesmo ponto são agrupados num pin; ao selecioná-lo, a lista horizontal permite abrir cada produto. Produtos sem localização válida mantêm-se na Lista, com aviso no mapa. Não foi adicionada uma biblioteca de clustering.
 
@@ -19,4 +21,4 @@ O mapa usa `react-native-maps` 1.27.2, Apple Maps no iOS e Google Maps no Androi
 - Bundles: `npx expo export --platform ios --platform android`.
 - Confirmar em dispositivo: pesquisa/limpeza; Home → categoria/destaques/proximidade; GPS autorizado/negado; preços inválidos; filtros em combinação; alternar vistas após carregar mais; selecionar pin com vários produtos; abrir detalhe/favoritar; scroll e bottom navigation.
 
-Não foram alterados o Home nem a bottom navigation nesta implementação.
+A bottom navigation mantém-se. Os destaques de produtos são independentes da secção de vendedores.

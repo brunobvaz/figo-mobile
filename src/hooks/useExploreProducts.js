@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useProducts from './useProducts';
 import useActiveScreen from './useActiveScreen';
 import { productService } from '../services/productService';
-import { discoveryProducts } from '../utils/homeDiscovery';
 import { applyEditorialFilters, productQuery } from '../utils/exploreFilters';
 
 export default function useExploreProducts(filters, coordinates, region, enabled = true) {
@@ -83,9 +82,8 @@ export default function useExploreProducts(filters, coordinates, region, enabled
   }, [requestKey, fetchPage, active]);
   const refresh = useCallback(() => active ? fetchPage(1, generation.current, true) : Promise.resolve(), [active, fetchPage]);
   const current = enabled && state.key === requestKey;
-  const editorial = useMemo(() => discoveryProducts(products), [products]);
-  const visible = useMemo(() => current ? applyEditorialFilters(state.items.map(item => products.find(cached => cached.id === item.id) || item).filter(item => item.is_active !== false && (!filters.availableOnly || item.status === 'active')), filters, editorial) : [],
-    [current, state.items, products, filters.availableOnly, filters.featured, filters.seasonal, filters.season, editorial]);
+  const visible = useMemo(() => current ? applyEditorialFilters(state.items.map(item => products.find(cached => cached.id === item.id) || item).filter(item => item.is_active !== false && item.status !== 'deleted' && (!filters.availableOnly || item.status === 'active')), filters) : [],
+    [current, state.items, products, filters.availableOnly, filters.featured, filters.seasonal, filters.season]);
   const hasMore = current && state.pagination?.page < state.pagination?.pages;
   return {
     products: visible, busy: enabled && (!current || state.busy), error: current ? state.error : '',

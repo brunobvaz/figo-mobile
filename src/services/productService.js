@@ -7,6 +7,7 @@ import { api } from './api';
 const serverBaseUrl = config.apiBaseUrl.replace(/\/api\/v1\/?$/, '');
 const normalizeProduct = (product) => ({
   ...product,
+  featured: product.featured === true,
   self_harvest: ['Frutas', 'Legumes'].includes(product.category) && product.self_harvest === true,
   is_active: product.is_active ?? true,
   status: product.status ?? 'active',

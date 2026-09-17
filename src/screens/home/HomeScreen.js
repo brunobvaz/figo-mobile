@@ -42,13 +42,14 @@ export default function HomeScreen({ navigation }) {
   const { activeLocation, coordinates, region, locating, error: locationError } = useActiveLocation();
   const currentSeason = currentProductSeason();
   const feed = useMemo(() => discoveryProducts(products), [products]);
+  const featuredResults = useExploreProducts({ featured: true }, null, {});
   const nearbyFilters = { radiusKm: 10, sortBy: 'distance', viewMode: 'list' };
   const nearbyResults = useExploreProducts(nearbyFilters, coordinates, region, Boolean(coordinates || region.municipalityCode));
   const refresh = useCallback(async () => {
     setRefreshing(true);
-    try { await Promise.all([refreshProducts(), nearbyResults.refresh()]); }
+    try { await Promise.all([refreshProducts(), featuredResults.refresh(), nearbyResults.refresh()]); }
     finally { setRefreshing(false); }
-  }, [refreshProducts, nearbyResults.refresh]);
+  }, [refreshProducts, featuredResults.refresh, nearbyResults.refresh]);
   const nearby = nearbyResults.products;
   const producers = useMemo(() => [...new Map(feed.filter(item => item.seller?.id)
     .map(item => [item.seller.id, item.seller])).values()], [feed]);
@@ -82,7 +83,8 @@ export default function HomeScreen({ navigation }) {
     </ScrollView></View>
     {isLoading && !feed.length ? <ListSkeleton product rows={2} label="A carregar produtos" /> : null}
     {refreshError ? <Pressable accessibilityRole="button" onPress={refreshProducts}><Text style={styles.help}>{refreshError}</Text></Pressable> : null}
-    {productSection('Produtos em destaque', feed.filter(item => item.featured === true), { featured: true }, 'featured')}
+    {productSection('Produtos em destaque', featuredResults.products, { featured: true }, 'featured')}
+    {featuredResults.error ? <Pressable accessibilityRole="button" onPress={featuredResults.retry}><Text style={styles.help}>Não foi possível carregar os destaques. Toca para tentar novamente.</Text></Pressable> : null}
     {productSection('Perto de ti', nearby, nearbyFilters, 'nearby')}
     {nearbyResults.error ? <Pressable accessibilityRole="button" onPress={nearbyResults.retry}><Text style={styles.help}>Não foi possível carregar os produtos próximos. Toca para tentar novamente.</Text></Pressable> : null}
     {productSection('Da época', feed.filter(item => isExplicitlyInSeason(item, currentSeason)), { season: currentSeason }, 'seasonal')}
@@ -92,7 +94,7 @@ export default function HomeScreen({ navigation }) {
         {producers.map(item => <ProducerCard key={item.id} producer={item} style={{ width: 264 * Math.max(1, fontScale) }} onPress={() => navigation.navigate(ROUTES.SELLER_PROFILE, { sellerId: item.id })} />)}
       </ScrollView>
     </View> : null}
-    {!isLoading && !feed.length ? <EmptyState title="Há espaço para os teus produtos" message="Publica o primeiro anúncio e partilha o que tens para vender." actionLabel="Publicar anúncio" onAction={() => navigation.navigate(ROUTES.SELL)} /> : null}
+    {!isLoading && !feed.length && !featuredResults.busy && !featuredResults.products.length ? <EmptyState title="Há espaço para os teus produtos" message="Publica o primeiro anúncio e partilha o que tens para vender." actionLabel="Publicar anúncio" onAction={() => navigation.navigate(ROUTES.SELL)} /> : null}
     <HomeDiscover />
   </Screen>;
 }

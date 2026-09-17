@@ -71,7 +71,7 @@ export default function ExploreFilterSheet({ panel, filters, onClose, onApply, r
           </> : null}
           {panel === 'more' ? <>
             <View style={styles.chips}>{toggle('availableOnly', 'Apenas disponíveis')}{toggle('featured', 'Em destaque')}{toggle('seasonal', 'Da época')}</View>
-            <Text style={styles.help}>Destaques: seleção temporária do Início. A informação sazonal ainda pode não estar disponível.</Text>
+            <Text style={styles.help}>Os destaques são selecionados pela equipa Figo. A informação sazonal depende de cada anúncio.</Text>
             <Text style={styles.label}>Unidade</Text>
             <View style={styles.chips}><Chip label="Todas" selected={!draft.unit} style={styles.chip} onPress={() => setDraft(current => ({ ...current, unit: undefined }))} />{UNITS.map(unit => <Chip key={unit} label={unit.replace('€/', '')} selected={draft.unit === unit} style={styles.chip} onPress={() => setDraft(current => ({ ...current, unit }))} />)}</View>
             <Text style={styles.label}>Vendedor / produtor</Text>

@@ -48,7 +48,7 @@ export default function ExploreScreen({ navigation, route }) {
   const producers = useMemo(() => [...new Map(cachedProducts.filter(item => item.seller?.id).map(item => [item.seller.id, item.seller])).values()], [cachedProducts]);
   const openProduct = product => navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: product.id });
   const editorialFilter = Boolean(filters.featured || filters.seasonal || filters.season);
-  const count = editorialFilter ? `${results.products.length} produtos${results.hasMore ? ' carregados' : ''}` : `${results.total ?? 0} produtos`;
+  const count = filters.seasonal || filters.season ? `${results.products.length} produtos${results.hasMore ? ' carregados' : ''}` : `${results.total ?? 0} produtos`;
   const activeChips = [
     ...(filters.radiusKm != null ? [{ label: `Até ${filters.radiusKm} km`, patch: { radiusKm: undefined } }] : []),
     ...(filters.category && filters.category !== 'Todos' ? [{ label: filters.category, patch: { category: undefined } }] : []),
@@ -84,7 +84,7 @@ export default function ExploreScreen({ navigation, route }) {
     </ScrollView> : null}
     {proximity && !coordinates ? <Pressable accessibilityRole="button" onPress={() => setPanel('distance')}><Text numberOfLines={2} style={styles.locationNote}>{locating ? 'A obter localização… A pesquisa continua disponível.' : locationError ? 'Sem localização. Toca para escolher uma região ou tentar novamente.' : 'Escolhe uma localização para calcular distâncias.'}</Text></Pressable> : null}
     {region.municipalityCode ? <Pressable accessibilityRole="button" onPress={() => setPanel('distance')}><Text style={styles.locationNote}>Região selecionada · Alterar localização</Text></Pressable> : null}
-    {editorialFilter ? <Text style={styles.help}>{(filters.season || filters.seasonal) ? 'A seleção depende da informação sazonal disponível.' : 'Seleção temporária de destaques do Início.'}</Text> : null}
+    {editorialFilter ? <Text style={styles.help}>{(filters.season || filters.seasonal) ? 'A seleção depende da informação sazonal disponível.' : 'Produtos selecionados pela equipa Figo.'}</Text> : null}
     <View style={styles.resultHeader}>
       <Text accessibilityLiveRegion="polite" style={styles.count}>{results.busy && !results.products.length ? 'A pesquisar…' : count}</Text>
       {viewMode === 'map' ? <Pressable accessibilityRole="button" accessibilityLabel="Atualizar produtos" accessibilityState={{ busy: results.busy, disabled: results.busy }} disabled={results.busy} style={styles.sort} onPress={results.refresh}>

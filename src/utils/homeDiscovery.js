@@ -1,10 +1,10 @@
 import { isExplicitlyInSeason } from './productSeasonality';
 
-// Featured selection remains temporary; seasonality follows the saved product availability.
+// Editorial selection is explicit in the API; old adverts are never featured automatically.
 export function discoveryProducts(products) {
-  return products.filter(product => product.is_active !== false && product.status !== 'deleted').map((product, index) => ({
+  return products.filter(product => product.is_active !== false && product.status !== 'deleted').map(product => ({
     ...product,
-    featured: product.featured ?? index < 6,
+    featured: product.featured === true,
     seasonal: isExplicitlyInSeason(product),
   }));
 }

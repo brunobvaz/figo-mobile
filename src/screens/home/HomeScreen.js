@@ -1,9 +1,8 @@
 import ListSkeleton from '../../components/common/ListSkeleton';
 import EmptyState from '../../components/common/EmptyState';
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useMemo, useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import { AppState, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import Avatar from '../../components/common/Avatar';
 import Input from '../../components/common/Input';
 import Header from '../../components/layout/Header';
@@ -13,6 +12,7 @@ import ProducerCard from '../../components/product/ProducerCard';
 import HomeLocationSheet from '../../components/home/HomeLocationSheet';
 import { useActiveLocation } from '../../context/ActiveLocationContext';
 import useExploreProducts from '../../hooks/useExploreProducts';
+import useActiveScreen from '../../hooks/useActiveScreen';
 import { locationLabel } from '../../utils/activeLocation';
 import { currentProductSeason, isExplicitlyInSeason } from '../../utils/productSeasonality';
 import HomeDiscover from '../../components/home/HomeDiscover';
@@ -29,11 +29,14 @@ export default function HomeScreen({ navigation }) {
   const [contentWidth, setContentWidth] = useState(0);
   const categoryWidth = Math.max(52 * Math.max(1, fontScale), (contentWidth - 30) / 6);
   const { homeProducts: products, isLoading, refreshProducts, refreshError } = useProducts();
-  useFocusEffect(useCallback(() => {
+  const active = useActiveScreen();
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    if (!active) return;
     refreshProducts();
-    const listener = AppState.addEventListener('change', state => { if (state === 'active') refreshProducts(); });
-    return () => listener.remove();
-  }, [refreshProducts]));
+    const timer = setInterval(refreshProducts, 30000);
+    return () => clearInterval(timer);
+  }, [active, refreshProducts]);
   const [query, setQuery] = useState('');
   const [locationOpen, setLocationOpen] = useState(false);
   const { activeLocation, coordinates, region, locating, error: locationError } = useActiveLocation();
@@ -41,6 +44,11 @@ export default function HomeScreen({ navigation }) {
   const feed = useMemo(() => discoveryProducts(products), [products]);
   const nearbyFilters = { radiusKm: 10, sortBy: 'distance', viewMode: 'list' };
   const nearbyResults = useExploreProducts(nearbyFilters, coordinates, region, Boolean(coordinates || region.municipalityCode));
+  const refresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await Promise.all([refreshProducts(), nearbyResults.refresh()]); }
+    finally { setRefreshing(false); }
+  }, [refreshProducts, nearbyResults.refresh]);
   const nearby = nearbyResults.products;
   const producers = useMemo(() => [...new Map(feed.filter(item => item.seller?.id)
     .map(item => [item.seller.id, item.seller])).values()], [feed]);
@@ -57,7 +65,9 @@ export default function HomeScreen({ navigation }) {
     {sectionHeader(title, () => explore(filters))}
     <ProductShelf products={items} variant={variant} onProductPress={openProduct} />
   </View> : null;
-  return <Screen scroll contentContainerStyle={styles.page}>
+  return <Screen scroll contentContainerStyle={styles.page} refreshControl={
+    <RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primaryDarkFigo} colors={[colors.primaryDarkFigo]} />
+  }>
     <Header title={`Olá, ${user?.name?.split(' ')[0] || 'vizinho'}`} subtitle="Descobre o que há perto de ti" location={locationLabel(activeLocation)} onLocationPress={() => setLocationOpen(true)} right={
       <Pressable accessibilityRole="button" accessibilityLabel="Abrir perfil" onPress={() => navigation.navigate(ROUTES.PROFILE)}><Avatar uri={user?.avatar} name={user?.name || ''} size={48} /></Pressable>
     } />

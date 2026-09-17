@@ -7,7 +7,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { I18nManager, Keyboard, Platform, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'; 
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import Badge from '../components/common/Badge';
 import { useChat } from '../context/ChatContext';
 import ChatScreen from '../screens/chat/ChatScreen';
 import ConversationsScreen from '../screens/chat/ConversationsScreen';
@@ -31,21 +30,12 @@ const Tabs = createBottomTabNavigator();
 const tabIcons = { HomeTab: ['home', 'home-outline'], ExploreTab: ['compass', 'compass-outline'], SellTab: ['add-circle', 'add-circle-outline'], Conversations: ['chatbubbles', 'chatbubbles-outline'], ProfileTab: ['person', 'person-outline'] };
 
 function TabIcon({ routeName, focused, color, size }) {
-    const { unreadTotal } = useChat();
     return <View style={styles.tabIcon}>
         <Ionicons
             name={tabIcons[routeName][focused ? 0 : 1]}
             color={color}
             size={routeName === ROUTES.SELL ? size + 6 : size}
         />
-        {routeName === ROUTES.CONVERSATIONS ?
-            <Badge
-                value={unreadTotal}
-                accessibilityLabel={`${unreadTotal} mensagens não lidas`}
-                style={styles.tabBadge}
-            />
-            : null
-        }
     </View>;
 }
 
@@ -53,6 +43,7 @@ const TAB_BAR_HEIGHT = 64;
 const TAB_BAR_GAP = 8;
 
 function TabNavigator() {
+    const { unreadTotal } = useChat();
     const insets = useSafeAreaInsets();
     const { width, fontScale } = useWindowDimensions();
     const barWidth = Math.min(640, width - insets.left - insets.right - 32);
@@ -85,7 +76,14 @@ function TabNavigator() {
                 <Tabs.Screen name={ROUTES.HOME} component={HomeScreen} options={{ title: 'Início' }} />
                 <Tabs.Screen name={ROUTES.EXPLORE} component={ExploreScreen} options={{ title: 'Explorar' }} />
                 <Tabs.Screen name={ROUTES.SELL} component={CreateProductScreen} options={{ title: 'Vender' }} />
-                <Tabs.Screen name={ROUTES.CONVERSATIONS} component={ConversationsScreen} options={{ title: 'Conversas' }} />
+                <Tabs.Screen name={ROUTES.CONVERSATIONS} component={ConversationsScreen} options={{
+                    title: 'Conversas',
+                    tabBarBadge: unreadTotal > 0 ? (unreadTotal > 99 ? '99+' : unreadTotal) : undefined,
+                    tabBarBadgeStyle: styles.tabBadge,
+                    tabBarAccessibilityLabel: unreadTotal > 0
+                        ? `Conversas, ${unreadTotal} ${unreadTotal === 1 ? 'novidade por ler' : 'novidades por ler'}`
+                        : 'Conversas'
+                }} />
                 <Tabs.Screen name={ROUTES.PROFILE} component={ProfileScreen} options={{ title: 'Perfil' }} />
             </Tabs.Navigator>; }
 
@@ -130,9 +128,9 @@ const styles = StyleSheet.create({
         justifyContent: 'center'
     },
     tabBadge: {
-        position: 'absolute',
-        top: -8,
-        right: -12,
-        transform: [{ scale: 0.8 }]
+        backgroundColor: colors.error,
+        color: colors.surface,
+        fontSize: 11,
+        fontWeight: '700'
     }
 });

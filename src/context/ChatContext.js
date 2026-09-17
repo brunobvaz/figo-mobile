@@ -13,20 +13,31 @@ export function ChatProvider({ children }) {
   const pages = useRef(1);
   const mounted = useRef(true);
   const inFlight = useRef(null);
+  const refreshQueued = useRef(false);
   const refresh = useCallback(() => {
-    if (inFlight.current) return inFlight.current;
+    if (!mounted.current) return Promise.resolve();
+    if (inFlight.current) {
+      // A notification or read receipt can arrive after the running request's snapshot.
+      refreshQueued.current = true;
+      return inFlight.current;
+    }
     inFlight.current = (async () => {
-      try {
-        const results = [];
-        for (let page = 1; page <= pages.current; page++) results.push(await chatService.list(page));
-        if (!mounted.current) return;
-        setConversations([...new Map(results.flatMap((result) => result.items).map((item) => [item.id, item])).values()]);
-        setUnreadTotal(results[0].unreadTotal);
-        setHasMore(results[0].pagination.total > pages.current * 50);
-        setError(null);
-      } catch (failure) { if (mounted.current) setError(failure.message); }
-      finally { if (mounted.current) setLoading(false); inFlight.current = null; }
-    })();
+      do {
+        refreshQueued.current = false;
+        try {
+          const results = [];
+          for (let page = 1; page <= pages.current; page++) results.push(await chatService.list(page));
+          if (!mounted.current) return;
+          setConversations([...new Map(results.flatMap((result) => result.items).map((item) => [item.id, item])).values()]);
+          setUnreadTotal(results[0].unreadTotal);
+          setHasMore(results[0].pagination.total > pages.current * 50);
+          setError(null);
+        } catch (failure) { if (mounted.current) setError(failure.message); }
+      } while (mounted.current && refreshQueued.current);
+    })().finally(() => {
+      if (mounted.current) setLoading(false);
+      inFlight.current = null;
+    });
     return inFlight.current;
   }, []);
   const loadMore = useCallback(async () => {
@@ -39,7 +50,7 @@ export function ChatProvider({ children }) {
     refresh();
     const timer = setInterval(() => { if (AppState.currentState === 'active') refresh(); }, 8000);
     const listener = AppState.addEventListener('change', (state) => { if (state === 'active') refresh(); });
-    return () => { mounted.current = false; clearInterval(timer); listener.remove(); };
+    return () => { mounted.current = false; refreshQueued.current = false; clearInterval(timer); listener.remove(); };
   }, [refresh]);
   return <ChatContext.Provider value={{ conversations, unreadTotal, loading, error, hasMore, refresh, loadMore }}>{children}</ChatContext.Provider>;
 }

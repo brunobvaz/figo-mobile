@@ -54,7 +54,7 @@ export default function ConversationsScreen({ navigation }) {
                     onPress={() => openConversation(item)}
                     style={({ pressed }) => [styles.conversation, pressed && styles.pressed]}
                 >
-                    <View><Avatar uri={item.participant.avatar} name={item.participant.name} size={52} /><Badge value={item.unreadCount} style={{ position: 'absolute', right: -4, top: -4 }} accessibilityLabel={`${item.unreadCount} mensagens não lidas`} /></View>
+                    <View><Avatar uri={item.participant.avatar} name={item.participant.name} size={52} /><Badge value={item.unreadCount} style={{ position: 'absolute', right: -4, top: -4 }} accessibilityLabel={`${item.unreadCount} ${item.unreadCount === 1 ? 'novidade por ler' : 'novidades por ler'}`} /></View>
 
                     <View style={styles.content}>
                         <View style={styles.row}>

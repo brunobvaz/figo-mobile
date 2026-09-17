@@ -18,7 +18,7 @@ export default function ProductPhotoGallery({ photos, title }) {
       <ScrollView key={width} ref={gallery} horizontal pagingEnabled showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={event => setIndex(Math.max(0, Math.min(photos.length - 1, Math.round(event.nativeEvent.contentOffset.x / width))))}>
         {photos.map((photo, position) => <OptimizedImage key={photo.filename || photo.url} imageWidth={1280}
-          source={{ uri: photo.uri }} resizeMode="contain" style={[styles.image, { width }]}
+          source={{ uri: photo.uri }} resizeMode="cover" style={[styles.image, { width }]}
           accessible accessibilityLabel={`${title}, fotografia ${position + 1} de ${photos.length}`} />)}
       </ScrollView>
       {photos.length > 1 && <View pointerEvents="none" style={styles.count}><Text accessibilityLiveRegion="polite" style={styles.countText}>{index + 1}/{photos.length}</Text></View>}

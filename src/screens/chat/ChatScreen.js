@@ -19,6 +19,7 @@ import { useChat } from '../../context/ChatContext';
 import { chatService } from '../../services/chatService';
 import { createId } from '../../utils/helpers';
 import { mergeMessages, redactRemovedParticipant } from '../../utils/chatMessages';
+import { visibleChatReceipts } from '../../utils/chatReadReceipts';
 import { activeTransactionStatuses, mergeTransactions, purchaseTimeline, reputationLabel } from '../../utils/chatTransactions';
 import useChatPurchase from '../../hooks/useChatPurchase';
 import TransactionCard from '../../components/chat/TransactionCard';
@@ -64,7 +65,6 @@ export default function ChatScreen({ route, navigation }) {
     if (nearLatest.current) list.current?.scrollToOffset({ offset: 0, animated: false });
   }, []);
   const viewabilityConfig = useRef({ itemVisiblePercentThreshold: 50 }).current;
-  active.current = focused && appState === 'active';
   const updateMessages = useCallback((incoming) => {
     rows.current = redactRemovedParticipant(mergeMessages(rows.current, incoming), availabilityRef.current.participant);
     setMessages(rows.current);
@@ -87,6 +87,9 @@ export default function ChatScreen({ route, navigation }) {
     onSaved: saved => { setTransactions(current => mergeTransactions(current, [saved])); scrollToLatest(); refresh(); },
     onRefresh: () => { setAttempt(value => value + 1); refresh(); } });
   const timeline = useMemo(() => purchaseTimeline(messages, transactions, Boolean(cursor)).reverse(), [messages, transactions, cursor]);
+  const timelineRef = useRef(timeline);
+  timelineRef.current = timeline;
+  active.current = focused && appState === 'active' && !loading && !contextProduct.loading && !purchase.sheet;
   const buyerName = availability.buyerId === user.id ? user.name : availability.participant?.name || 'o comprador';
   const sellerName = availability.sellerId === user.id ? user.name : availability.participant?.name || 'o vendedor';
   const canPropose = availability.canPropose && !transactions.some(item => activeTransactionStatuses.includes(item.status));
@@ -148,23 +151,23 @@ export default function ChatScreen({ route, navigation }) {
 
   const acknowledgeVisible = useCallback(async () => {
     if (!id || !active.current) return;
-    const ids = visible.current.filter((item) => item.kind !== 'transaction' && item.senderId !== user.id && !item.readAt && !item.status && !readPending.current.has(item.id) && !acknowledged.current.has(item.id)).map((item) => item.id).slice(0, 100);
-    if (!ids.length) return;
-    ids.forEach((key) => readPending.current.add(key));
+    const { messageIds, transactionEventIds, keys } = visibleChatReceipts(visible.current, timelineRef.current, user.id, readPending.current, acknowledged.current);
+    if (!keys.length) return;
+    keys.forEach((key) => readPending.current.add(key));
     try {
-      await chatService.read(id, ids);
-      ids.forEach((key) => acknowledged.current.add(key));
+      await chatService.read(id, messageIds, transactionEventIds);
+      keys.forEach((key) => acknowledged.current.add(key));
       if (alive.current) refresh();
     } catch { /* Retry on the next poll while the messages remain visible. */ }
-    finally { ids.forEach((key) => readPending.current.delete(key)); }
+    finally { keys.forEach((key) => readPending.current.delete(key)); }
   }, [id, user.id, refresh]);
   const acknowledgeRef = useRef(acknowledgeVisible);
   acknowledgeRef.current = acknowledgeVisible;
   const onViewableItemsChanged = useRef(({ viewableItems }) => {
-    visible.current = viewableItems.map(({ item }) => item);
+    visible.current = viewableItems;
     acknowledgeRef.current();
   }).current;
-  useEffect(() => { acknowledgeVisible(); }, [messages, focused, appState, acknowledgeVisible]);
+  useEffect(() => { acknowledgeVisible(); }, [timeline, focused, appState, loading, contextProduct.loading, purchase.sheet, acknowledgeVisible]);
 
   const send = async (retry) => {
     const text = retry?.text || message.trim();

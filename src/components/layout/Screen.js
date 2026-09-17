@@ -8,7 +8,7 @@ import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import { CONTENT_MAX_WIDTH } from '../../theme/layout';
 
-export default function Screen({ children, scroll = false, contentContainerStyle, style, safeAreaEdges, maxWidth = CONTENT_MAX_WIDTH, scrollRef, onContentLayout }) {
+export default function Screen({ children, scroll = false, contentContainerStyle, style, safeAreaEdges, maxWidth = CONTENT_MAX_WIDTH, scrollRef, onContentLayout, refreshControl }) {
     const clearance = useTabBarClearance();
     const tabBarHeight = useContext(BottomTabBarHeightContext);
     const headerShown = useContext(HeaderShownContext);
@@ -18,6 +18,7 @@ export default function Screen({ children, scroll = false, contentContainerStyle
     return <SafeAreaView edges={safeAreaEdges || edges} style={[styles.safe, style]}>
         {scroll ? <ScrollView
             ref={scrollRef}
+            refreshControl={refreshControl}
             style={styles.scroll}
             contentContainerStyle={[styles.content, { maxWidth }, contentContainerStyle, clearance > 0 && { paddingBottom: Math.max(StyleSheet.flatten(contentContainerStyle)?.paddingBottom ?? spacing.lg, clearance) }]}
             showsVerticalScrollIndicator={false}

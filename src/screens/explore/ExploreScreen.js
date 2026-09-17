@@ -3,7 +3,7 @@ import Header from '../../components/layout/Header';
 import { CONTENT_MAX_WIDTH, productGridLayout } from '../../theme/layout';
 import useTabBarClearance from '../../hooks/useTabBarClearance';
 import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Chip from '../../components/common/Chip';
 import Input from '../../components/common/Input';
@@ -87,18 +87,24 @@ export default function ExploreScreen({ navigation, route }) {
     {editorialFilter ? <Text style={styles.help}>{(filters.season || filters.seasonal) ? 'A seleção depende da informação sazonal disponível.' : 'Seleção temporária de destaques do Início.'}</Text> : null}
     <View style={styles.resultHeader}>
       <Text accessibilityLiveRegion="polite" style={styles.count}>{results.busy && !results.products.length ? 'A pesquisar…' : count}</Text>
+      {viewMode === 'map' ? <Pressable accessibilityRole="button" accessibilityLabel="Atualizar produtos" accessibilityState={{ busy: results.busy, disabled: results.busy }} disabled={results.busy} style={styles.sort} onPress={results.refresh}>
+        <Ionicons name="refresh" size={18} color={colors.primaryDarkFigo} /><Text style={styles.link}>Atualizar</Text>
+      </Pressable> : null}
       <Pressable accessibilityRole="button" accessibilityLabel="Ordenar resultados" style={styles.sort} onPress={() => setPanel('sort')}><Text style={styles.link}>{SORT_OPTIONS.find(([value]) => value === (filters.sortBy || 'recent'))?.[1]}</Text><Ionicons name="chevron-down" size={14} color={colors.primaryDarkFigo} accessible={false} /></Pressable>
       {hasExploreFilters(filters) ? <Pressable accessibilityRole="button" style={styles.sort} onPress={clear}><Text style={styles.link}>Limpar tudo</Text></Pressable> : null}
     </View>
     {results.error ? <View style={styles.feedback}><Text accessibilityRole="alert" style={styles.error}>{results.error}</Text><Button title="Tentar novamente" variant="secondary" onPress={results.retry} /></View> : null}
     {viewMode === 'list' ? <FlatList key={columns} data={results.products} numColumns={columns} keyExtractor={item => String(item.id)} style={styles.results}
       keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" showsVerticalScrollIndicator={false}
+      refreshing={results.refreshing} onRefresh={results.refresh}
       contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]} columnWrapperStyle={columns > 1 ? styles.row : undefined}
       initialNumToRender={6} maxToRenderPerBatch={6} windowSize={5}
       renderItem={({ item }) => <ProductCard product={item} showBadges style={{ width: cardWidth }} onPress={() => openProduct(item)} />}
       ListEmptyComponent={results.busy ? <ListSkeleton product label="A pesquisar produtos" /> : empty} ListFooterComponent={loadMore} />
       : <View style={styles.results}>
-        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView contentContainerStyle={[styles.list, { paddingBottom: tabBarClearance + spacing.lg }]}>{results.busy ? <ListSkeleton product label="A pesquisar produtos" /> : empty}</ScrollView>}
+        {results.products.length ? <ExploreMap products={results.products} onProductPress={openProduct} /> : <ScrollView
+          refreshControl={<RefreshControl refreshing={results.refreshing} onRefresh={results.refresh} tintColor={colors.primaryDarkFigo} colors={[colors.primaryDarkFigo]} />}
+          contentContainerStyle={[styles.list, { flexGrow: 1, paddingBottom: tabBarClearance + spacing.lg }]}>{results.busy ? <ListSkeleton product label="A pesquisar produtos" /> : empty}</ScrollView>}
         {loadMore}
       </View>}
     <ExploreFilterSheet panel={panel} filters={filters} onClose={() => setPanel(null)} onApply={updateFilters} region={region} onRegionChange={setRegion} onLocate={locate} locating={locating} producers={producers} />

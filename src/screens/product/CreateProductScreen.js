@@ -24,6 +24,7 @@ import spacing from '../../theme/spacing';
 import ProductPriceInput from '../../components/product/ProductPriceInput';
 import { parsePrice, formatPriceInput } from '../../utils/price';
 import { validateProduct } from '../../utils/validators';
+import { productSaveError } from '../../utils/productErrors';
 
 const emptyProduct = { title: '', description: '', price: '', unit: '€/kg', category: 'Legumes', self_harvest: false, seasonality: 'all_year', municipalityCode: '', parishCode: '', locality: '', latitude: '', longitude: '', locationSource: 'parish', locationChanged: true, image: '' };
 
@@ -69,14 +70,17 @@ function ProductForm({ navigation, existingProduct }) {
         setErrors(current => ({ ...current, [key]: undefined }));
         setForm(current => ({ ...current, [key]: value, ...(key === 'category' && !['Frutas', 'Legumes'].includes(value) ? { self_harvest: false } : {}) }));
     };
+    const focusErrors = nextErrors => {
+        const section = nextErrors.photos ? 'photos' : nextErrors.title || nextErrors.description || nextErrors.category || nextErrors.seasonality ? 'product' : nextErrors.price || nextErrors.unit ? 'price' : 'location';
+        Keyboard.dismiss();
+        requestAnimationFrame(() => scroll.current?.scrollTo({ y: Math.max(0, (sections.current[section] || 0) - 16), animated: true }));
+    };
     const submit = async () => {
         if (savingRef.current || pickingRef.current) return;
         const nextErrors = { ...validateProduct(form), ...(!photos.length ? { photos: 'Adiciona pelo menos uma fotografia do produto.' } : {}) };
         setErrors(nextErrors);
         if (Object.keys(nextErrors).length) {
-            const section = nextErrors.photos ? 'photos' : nextErrors.title || nextErrors.description || nextErrors.category ? 'product' : nextErrors.price || nextErrors.unit ? 'price' : 'location';
-            Keyboard.dismiss();
-            requestAnimationFrame(() => scroll.current?.scrollTo({ y: Math.max(0, (sections.current[section] || 0) - 16), animated: true }));
+            focusErrors(nextErrors);
             return;
         }
         const payload = { ...form, price: parsePrice(form.price), imagesRevision };
@@ -95,7 +99,14 @@ function ProductForm({ navigation, existingProduct }) {
                 navigation.navigate(ROUTES.PRODUCT_DETAILS, { productId: item.id });
                 notify('Anúncio publicado');
             }
-        } catch (error) { Alert.alert('Não foi possível guardar', error.message); }
+        } catch (error) {
+            const feedback = productSaveError(error);
+            if (Object.keys(feedback.errors).length) {
+                setErrors(feedback.errors);
+                focusErrors(feedback.errors);
+            }
+            Alert.alert('Não foi possível guardar', feedback.message);
+        }
         finally { savingRef.current = false; setSaving(false); }
     };
     const chooseImages = async () => {
@@ -128,8 +139,9 @@ function ProductForm({ navigation, existingProduct }) {
             onCover={index => setPhotos(current => [current[index], ...current.filter((_, position) => position !== index)])} />
         </View>
         <FormSection title="Informação do produto" onLayout={sectionLayout('product')}>
-          <Input label="Título" placeholder="Ex.: Tomates da horta" value={form.title} editable={!saving} onChangeText={update('title')} error={errors.title} />
-          <Input label="Descrição" placeholder="Descreve o produto, a origem e o que o torna especial." value={form.description} editable={!saving} onChangeText={update('description')} multiline error={errors.description} />
+          <Input label="Título" placeholder="Ex.: Tomates da horta" value={form.title} maxLength={120} editable={!saving} onChangeText={update('title')} error={errors.title} />
+          <Input label="Descrição" placeholder="Descreve o produto, a origem e o que o torna especial." value={form.description} maxLength={2000} editable={!saving} onChangeText={update('description')} multiline error={errors.description} />
+          <Text style={styles.activationText}>Entre 10 e 2000 caracteres.</Text>
           <Choice label="Categoria" items={mockCategories.slice(1)} value={form.category} disabled={saving} onChange={update('category')} />
           {errors.category ? <Text accessibilityRole="alert" style={styles.error}>{errors.category}</Text> : null}
           <View style={styles.field}>
@@ -145,6 +157,7 @@ function ProductForm({ navigation, existingProduct }) {
                 </Pressable>;
               })}
             </View>
+            {errors.seasonality ? <Text accessibilityRole="alert" style={styles.error}>{errors.seasonality}</Text> : null}
           </View>
           {['Frutas', 'Legumes'].includes(form.category) ? <View style={styles.field}>
             <View style={styles.harvestRow}>
@@ -158,7 +171,7 @@ function ProductForm({ navigation, existingProduct }) {
           <ProductPriceInput hideHeading price={form.price} unit={form.unit} onPriceChange={update('price')} onUnitChange={update('unit')} error={errors.price || errors.unit} disabled={saving} />
         </FormSection>
         <FormSection title="Localização" subtitle="Indica onde está o produto." onLayout={sectionLayout('location')}>
-          <ProductLocation form={form} disabled={saving} setForm={change => { setForm(change); setErrors(current => ({ ...current, location: undefined })); }} errors={errors} />
+          <ProductLocation form={form} disabled={saving} setForm={change => { setForm(change); setErrors(current => ({ ...current, location: undefined, locality: undefined })); }} errors={errors} />
         </FormSection>
         <Text style={styles.activationText}>A entrega e o pagamento são combinados diretamente com o comprador.</Text>
         <Button title={existingProduct ? 'Guardar alterações' : 'Publicar anúncio'} loading={saving} disabled={picking} onPress={submit} />

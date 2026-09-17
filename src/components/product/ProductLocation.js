@@ -6,12 +6,11 @@ import AddressSelect from '../common/AddressSelect';
 import { applyProductAddress } from '../../utils/productLocation';
 import Input from '../common/Input';
 import ProductFieldHeading from './ProductFieldHeading';
-import { validateProductLocation } from '../../utils/validators';
 export default function ProductLocation({ form, setForm, errors, disabled = false }) {
   const [addressOpen, setAddressOpen] = useState(false);
   const locationDefined = form.locationChanged === false || (form.parishCode
     && Number.isFinite(form.latitude) && Number.isFinite(form.longitude));
-  const locationError = errors.location ? validateProductLocation(form) : '';
+  const locationError = errors.location || '';
   const change = (patch, parish) => {
     if (Object.entries(patch).every(([key, value]) => form[key] === value)) return;
     setForm(current => applyProductAddress(current, patch, parish));
@@ -19,7 +18,7 @@ export default function ProductLocation({ form, setForm, errors, disabled = fals
   return <View style={{ gap: 10 }}>
     <AddressSelect disabled={disabled} municipalityCode={form.municipalityCode} parishCode={form.parishCode} onChange={change} open={addressOpen} onOpenChange={setAddressOpen} />
     <ProductFieldHeading title="Localidade" subtitle="Indica a aldeia, o lugar ou a zona dentro da freguesia." />
-    <Input editable={!disabled} accessibilityLabel="Localidade" value={form.locality || ''} onChangeText={locality => change({ locality })} error={errors.locality} />
+    <Input editable={!disabled} accessibilityLabel="Localidade" value={form.locality || ''} maxLength={120} onChangeText={locality => change({ locality })} error={errors.locality} />
     {locationDefined ? <View style={styles.success} accessibilityLiveRegion="polite">
       <Ionicons name="checkmark-circle" size={34} color="#278438" />
       <View style={styles.statusCopy}>

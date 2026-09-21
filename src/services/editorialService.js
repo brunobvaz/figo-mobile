@@ -1,12 +1,12 @@
-import recipes from '../data/mockRecipes';
+import { recipeService } from './recipeService';
 import events from '../data/mockEvents';
 
 export const RECIPE_FILTERS = ['Todos', 'Rápidas', 'Vegetarianas', 'Doces', 'Sopas'];
 export const EVENT_FILTERS = ['Todos', 'Esta semana', 'Este mês', 'Feiras', 'Mercados'];
 
-// Replace only these loaders with API calls when editorial endpoints are available.
+// Recipes come from the API; events retain their existing demo loader for now.
 export const editorialService = {
-  async getSeasonalRecipes() { return recipes.map(recipe => ({ ...recipe, ingredients: [...recipe.ingredients], categories: [...recipe.categories] })); },
+  getSeasonalRecipes(params) { return recipeService.page(params); },
   async getLocalEvents() { return events.map(event => ({ ...event })); },
 };
 

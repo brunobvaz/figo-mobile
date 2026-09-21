@@ -78,6 +78,18 @@ As variáveis públicas Expo começam por `EXPO_PUBLIC_`. Define `EXPO_PUBLIC_AP
 
 O esquema `daterra://` está configurado para abrir o ecrã de recuperação através de `daterra://reset-password?token=...`.
 
+## Receitas ligadas ao backend
+
+`SeasonalRecipesScreen` apresenta as receitas criadas no backoffice, lidas da collection `recipes` através de `GET /api/v1/recipes`. `editorialService` delega em `recipeService`; `useRecipes` gere filtros, paginação de 20 itens, atualização ao regressar ao ecrã/primeiro plano e atualização manual. A app não recorre a `mockRecipes.js` se a ligação falhar: mostra o erro e permite repetir.
+
+Os filtros Todos, Rápidas (até 30 minutos), Vegetarianas, Doces e Sopas são aplicados pelo servidor. Todas as receitas guardadas no backoffice ficam disponíveis; a opção “Da época” controla o distintivo sazonal. Fotografias carregadas no backoffice são lidas pela rota pública `/api/v1/recipes/:id/image`, na mesma origem de `EXPO_PUBLIC_API_BASE_URL`, sem credenciais de administrador.
+
+Os cards mostram apenas fotografia, título (até duas linhas), tempo, dificuldade e distintivo sazonal. Ao tocar, `RecipeDetailScreen` recebe apenas `recipeId` e consulta `GET /api/v1/recipes/:id`. O detalhe mostra o título completo, descrição, categorias, todos os ingredientes e passos numerados, e volta a consultar o servidor ao regressar ao ecrã ou ao primeiro plano. `RecipePhoto` e `RecipeMeta` partilham a apresentação entre card e detalhe. Uma receita eliminada apresenta “Receita indisponível”; falhas de ligação permitem repetir. Sem passos definidos, o ecrã indica que a preparação ainda não foi adicionada.
+
+Para testar, executar o backend atualizado, abrir **Início → Receitas da época** e comparar com as receitas do backoffice. Alterar uma receita no backoffice e puxar para atualizar na app; verificar filtros e fotografias. Num ambiente publicado, publicar primeiro as novas rotas no backend e atualizar a app. Os eventos continuam a usar `mockEvents.js`.
+
+Os testes do contrato e do cliente estão no backend: `npm test -- tests/publicRecipes.test.js tests/recipeServiceClient.test.js tests/recipesScreenClient.test.js tests/editorialClient.test.js`.
+
 ## Chat real e teste com duas contas
 
 O chat já não utiliza `mockConversations`. `ChatProvider` mantém as conversas e o total de mensagens não lidas, e é desmontado no logout/troca de conta. O indicador sobre o avatar mostra as não lidas dessa conversa; a tab Conversas mostra o total. O vendedor vê o nome e avatar do comprador, e vice-versa.

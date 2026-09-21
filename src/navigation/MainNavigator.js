@@ -15,6 +15,7 @@ import AccountProductsScreen from '../screens/profile/AccountProductsScreen';
 import FavoritesScreen from '../screens/favorites/FavoritesScreen'; 
 import HomeScreen from '../screens/home/HomeScreen';
 import SeasonalRecipesScreen from '../screens/recipes/SeasonalRecipesScreen';
+import RecipeDetailScreen from '../screens/recipes/RecipeDetailScreen';
 import FairsEventsScreen from '../screens/events/FairsEventsScreen'; 
 import OrdersScreen from '../screens/orders/OrdersScreen'; 
 import CreateProductScreen from '../screens/product/CreateProductScreen'; 
@@ -94,6 +95,7 @@ export default function MainNavigator() {
         <Stack.Screen name={ROUTES.LEGAL_DOCUMENT} component={LegalDocumentScreen} options={({ route }) => ({ headerShown: true, title: route.params?.title || 'Informação legal', headerBackTitle: 'Voltar' })} />
         <Stack.Screen name="MainTabs" component={TabNavigator} options={{ headerShown: false }} />
                 <Stack.Screen name={ROUTES.SEASONAL_RECIPES} component={SeasonalRecipesScreen} options={{ title: 'Receitas da época' }} />
+                <Stack.Screen name={ROUTES.RECIPE_DETAIL} component={RecipeDetailScreen} options={{ title: 'Receita' }} />
                 <Stack.Screen name={ROUTES.FAIRS_EVENTS} component={FairsEventsScreen} options={{ title: 'Feiras e eventos' }} />
                 <Stack.Screen name={ROUTES.PRODUCT_DETAILS} component={ProductDetailsScreen} options={{ title: 'Produto' }} />
                 <Stack.Screen name={ROUTES.EDIT_PRODUCT} component={CreateProductScreen} options={{ title: 'Editar produto' }} />

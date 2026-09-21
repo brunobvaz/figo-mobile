@@ -23,6 +23,7 @@ export const ROUTES = {
     SELLER_PRODUCTS: 'SellerProducts',
     EDIT_PROFILE: 'EditProfile', 
     SEASONAL_RECIPES: 'SeasonalRecipesScreen',
+    RECIPE_DETAIL: 'RecipeDetailScreen',
     FAIRS_EVENTS: 'FairsEventsScreen',
     ORDERS: 'Orders' 
 };

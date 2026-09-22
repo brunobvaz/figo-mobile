@@ -25,6 +25,7 @@ export const ROUTES = {
     SEASONAL_RECIPES: 'SeasonalRecipesScreen',
     RECIPE_DETAIL: 'RecipeDetailScreen',
     FAIRS_EVENTS: 'FairsEventsScreen',
+    EVENT_DETAIL: 'EventDetailScreen',
     ORDERS: 'Orders' 
 };
 

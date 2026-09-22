@@ -1,55 +1,47 @@
 import LoadingIndicator from '../../components/common/LoadingIndicator';
-import { useEffect, useMemo, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Screen from '../../components/layout/Screen';
 import Chip from '../../components/common/Chip';
 import Button from '../../components/common/Button';
 import EmptyState from '../../components/common/EmptyState';
 import EventCard from '../../components/common/EventCard';
-import { editorialService, filterEvents, EVENT_FILTERS } from '../../services/editorialService';
+import { EVENT_FILTERS } from '../../services/editorialService';
+import useEvents from '../../hooks/useEvents';
+import { ROUTES } from '../../navigation/routes';
 import colors from '../../theme/colors';
 import spacing from '../../theme/spacing';
 import typography from '../../theme/typography';
 
-export default function FairsEventsScreen() {
-  const [items, setItems] = useState([]);
+export default function FairsEventsScreen({ navigation }) {
   const [filter, setFilter] = useState('Todos');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [retry, setRetry] = useState(0);
-  useEffect(() => {
-    let active = true;
-    setLoading(true); setError('');
-    editorialService.getLocalEvents().then(data => { if (active) setItems(data); })
-      .catch(() => { if (active) setError('Não foi possível carregar o conteúdo. Tenta novamente.'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [retry]);
-  const today = new Date().toDateString();
-  const visible = useMemo(() => filterEvents(items, filter), [items, filter, today]);
-  const openItem = item => {
-    // TODO: navigate to EventDetailScreen when the detail screen exists.
-    Alert.alert(item.title, 'O detalhe deste evento estará disponível numa próxima versão.');
-  };
-  return <Screen scroll contentContainerStyle={styles.page}>
-    <Text style={styles.subtitle}>Descobre o que vai acontecer na tua região.</Text>
+  const { items, busy, error, refreshing, hasMore, refresh, retry, loadMore } = useEvents(filter);
+  const openItem = item => navigation.navigate(ROUTES.EVENT_DETAIL, { eventId: item.id });
+  return <Screen scroll contentContainerStyle={styles.page}
+    refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} tintColor={colors.primaryFigo} colors={[colors.primaryFigo]} />}>
+    <Text style={styles.subtitle}>Descobre feiras, mercados e encontros com produtores.</Text>
     <View style={styles.context}>
       <Ionicons name="calendar-outline" size={25} color={colors.primaryDarkFigo} />
       <View style={styles.contextCopy}>
-        <Text style={styles.contextTitle}>Próximos de ti</Text>
+        <Text style={styles.contextTitle}>Agenda local</Text>
         <Text style={styles.contextDescription}>Mercados, feiras e encontros com produtores locais.</Text>
       </View>
     </View>
-    <Text style={styles.notice}>Eventos fictícios de demonstração · setembro/outubro de 2026. As distâncias também são exemplos.</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filtersScroll} contentContainerStyle={styles.filters}>
       {EVENT_FILTERS.map(label => <Chip key={label} label={label} selected={filter === label} onPress={() => setFilter(label)} style={styles.chip} />)}
     </ScrollView>
-    {loading ? <LoadingIndicator accessibilityLabel="A carregar" color={colors.primaryFigo} /> : error ? <View style={styles.feedback}>
-      <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
-      <Button title="Tentar novamente" onPress={() => setRetry(value => value + 1)} />
-    </View> : visible.length ? visible.map(item => <EventCard key={item.id} event={item} onPress={() => openItem(item)} />)
-      : <View style={styles.feedback}><EmptyState title="Não encontrámos eventos" message="Experimenta alterar o período ou tipo de evento." /><Button title="Ver todos" variant="secondary" onPress={() => setFilter('Todos')} /></View>}
+    {busy && items.length === 0 ? <LoadingIndicator accessibilityLabel="A carregar eventos" color={colors.primaryFigo} /> : <>
+      {items.map(item => <EventCard key={item.id} event={item} onPress={() => openItem(item)} />)}
+      {error ? <View style={styles.feedback}>
+        <Text accessibilityRole="alert" style={styles.error}>{error}</Text>
+        <Button title="Tentar novamente" variant="secondary" onPress={retry} disabled={busy} />
+      </View> : !items.length ? <View style={styles.feedback}>
+        <EmptyState title="Não encontrámos eventos" message={filter === 'Todos' ? 'Ainda não há eventos disponíveis. Volta a visitar esta página em breve.' : 'Experimenta alterar o período ou tipo de evento.'} />
+        {filter !== 'Todos' && <Button title="Ver todos" variant="secondary" onPress={() => setFilter('Todos')} />}
+      </View> : null}
+      {hasMore && !error && <Button title="Carregar mais" variant="secondary" loading={busy} onPress={loadMore} />}
+    </>}
   </Screen>;
 }
 const styles = StyleSheet.create({
@@ -59,7 +51,7 @@ const styles = StyleSheet.create({
   contextCopy: { flex: 1, gap: spacing.xs },
   contextTitle: { color: colors.primaryDarkFigo, fontSize: typography.sizes.subtitle, fontWeight: typography.weights.bold },
   contextDescription: { color: colors.text, fontSize: typography.sizes.body, lineHeight: typography.lineHeights.body },
-  notice: { color: colors.textMuted, fontSize: typography.sizes.caption, lineHeight: 18 },
-  filters: { gap: spacing.sm }, chip: { minHeight: 44, justifyContent: 'center' },
+  filtersScroll: { flexGrow: 0, flexShrink: 0 },
+  filters: { gap: spacing.sm, alignItems: 'center' }, chip: { minHeight: 44, justifyContent: 'center' },
   feedback: { gap: spacing.md }, error: { color: colors.error },
 });

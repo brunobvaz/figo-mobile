@@ -86,9 +86,21 @@ Os filtros Todos, Rápidas (até 30 minutos), Vegetarianas, Doces e Sopas são a
 
 Os cards mostram apenas fotografia, título (até duas linhas), tempo, dificuldade e distintivo sazonal. Ao tocar, `RecipeDetailScreen` recebe apenas `recipeId` e consulta `GET /api/v1/recipes/:id`. O detalhe mostra o título completo, descrição, categorias, todos os ingredientes e passos numerados, e volta a consultar o servidor ao regressar ao ecrã ou ao primeiro plano. `RecipePhoto` e `RecipeMeta` partilham a apresentação entre card e detalhe. Uma receita eliminada apresenta “Receita indisponível”; falhas de ligação permitem repetir. Sem passos definidos, o ecrã indica que a preparação ainda não foi adicionada.
 
-Para testar, executar o backend atualizado, abrir **Início → Receitas da época** e comparar com as receitas do backoffice. Alterar uma receita no backoffice e puxar para atualizar na app; verificar filtros e fotografias. Num ambiente publicado, publicar primeiro as novas rotas no backend e atualizar a app. Os eventos continuam a usar `mockEvents.js`.
+Para testar, executar o backend atualizado, abrir **Início → Receitas da época** e comparar com as receitas do backoffice. Alterar uma receita no backoffice e puxar para atualizar na app; verificar filtros e fotografias. Num ambiente publicado, publicar primeiro as novas rotas no backend e atualizar a app.
 
 Os testes do contrato e do cliente estão no backend: `npm test -- tests/publicRecipes.test.js tests/recipeServiceClient.test.js tests/recipesScreenClient.test.js tests/editorialClient.test.js`.
+
+## Eventos ligados ao backend
+
+**Início → Feiras e eventos** apresenta os eventos da collection `events`, criados no backoffice. `editorialService` delega em `eventService`, que lê `GET /api/v1/events`; `useEvents` gere filtros, páginas de 20 itens, erros recuperáveis e atualização manual ou ao regressar ao ecrã/primeiro plano. `mockEvents.js` fica apenas como fixture de teste, sem uso na aplicação nem fallback em falhas de rede.
+
+Os filtros Esta semana (segunda a domingo), Este mês, Feiras e Mercados são aplicados no servidor antes da paginação. Todos inclui também eventos históricos, com ordenação por data, hora e ID. Datas e horários mantêm o dia local definido no backoffice. A distância, quando preenchida, é identificada como referência editorial; não é calculada a partir do GPS do utilizador.
+
+Ao tocar num evento, `EventDetailScreen` consulta `GET /api/v1/events/:id` e mostra título, fotografia, data, horário, local, tipo, entrada gratuita e descrição. O `EventPoster` mostra primeiro a metade superior do cartaz 4:5, à largura disponível. “Expandir” revela a imagem completa com uma animação de altura de 360 ms que desloca as informações para baixo; “Recolher” volta à vista compacta. A imagem mantém a escala durante a animação, adapta-se à largura do ecrã e respeita a preferência de reduzir movimento. Não existe botão para imagens ausentes ou que falhem o carregamento. Um evento eliminado apresenta “Evento indisponível”; falhas de rede permitem repetir. As fotografias carregadas no backoffice são lidas em `/api/v1/events/:id/image?v=...`, na origem de `EXPO_PUBLIC_API_BASE_URL`, sem credenciais administrativas. Os cards usam `EventPhoto`; `EventMeta` partilha a apresentação dos dados entre card e detalhe.
+
+Para testar, usar o backend atualizado e a mesma base do backoffice: criar um evento, abrir a lista, consultar o detalhe, editar e puxar para atualizar, e eliminar e confirmar que desaparece após atualização. Testar também uma imagem carregada, filtros, base vazia e ausência de rede. Num ambiente publicado, atualizar primeiro o backend e depois a app; os eventos existentes ficam disponíveis sem migração.
+
+Testes no backend: `npm test -- tests/publicEvents.test.js tests/adminEvents.test.js tests/eventServiceClient.test.js tests/eventsScreenClient.test.js tests/editorialClient.test.js`.
 
 ## Chat real e teste com duas contas
 

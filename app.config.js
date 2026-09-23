@@ -2,7 +2,7 @@
 // iOS builds do not require this file.
 module.exports = ({ config }) => ({
   ...config,
-  plugins: [...(config.plugins || []), ...(process.env.GOOGLE_MAPS_ANDROID_API_KEY ? [['react-native-maps', { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY }]] : []), ['expo-location', { locationWhenInUsePermission: 'A DaTerra usa a localização para encontrar produtos próximos.' }]],
+  plugins: [...(config.plugins || []), ...(process.env.GOOGLE_MAPS_ANDROID_API_KEY ? [['react-native-maps', { androidGoogleMapsApiKey: process.env.GOOGLE_MAPS_ANDROID_API_KEY }]] : []), ['expo-location', { locationWhenInUsePermission: 'A Figo usa a tua localização para encontrar produtos próximos e obter direções para eventos.' }]],
   extra: { ...config.extra, googleMapsAndroidConfigured: Boolean(process.env.GOOGLE_MAPS_ANDROID_API_KEY) },
   android: {
     ...config.android,

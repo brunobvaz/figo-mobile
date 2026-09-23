@@ -25,7 +25,7 @@ export function locationLabel(location) {
   return location?.municipality || location?.parish || (location?.source === 'device' ? 'Localização atual' : 'Definir localização');
 }
 
-export async function deviceLocation(Location, { requestPermission = true } = {}) {
+export async function deviceLocation(Location, { requestPermission = true, resolveAddress = true } = {}) {
   let permission = await Location.getForegroundPermissionsAsync();
   if (!permission.granted && requestPermission && permission.canAskAgain !== false) permission = await Location.requestForegroundPermissionsAsync();
   if (!permission.granted) throw new Error('Autoriza a localização nas definições ou pesquisa por concelho e freguesia.');
@@ -37,6 +37,7 @@ export async function deviceLocation(Location, { requestPermission = true } = {}
         const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
         const point = locationCoordinates(position.coords);
         if (!point) throw new Error('Localização indisponível.');
+        if (!resolveAddress) return point;
         let place;
         try { [place] = await Location.reverseGeocodeAsync(point); } catch { /* Coordinates remain useful without a place name. */ }
         return { ...point, municipality: place?.city || place?.subregion || place?.district, parish: place?.district };
